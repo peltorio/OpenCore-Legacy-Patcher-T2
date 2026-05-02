@@ -82,10 +82,10 @@ class BuildOpenCore:
         # We check if the current model has the T2_CHIP feature flag
         if "T2_CHIP" in self.constants.device_properties.get(self.model, {}).get("Features", []):
             try:
-                logging.info("- Adding T2-specific bypass kexts (iBridged & CryptexFixup)")
+                logging.info("- Adding T2-specific bypass kexts")
                 # 1. Helper Kexts
                 support.BuildSupport(self.model, self.constants, self.config).enable_kext("CryptexFixup.kext", "1.1.0", self.constants.kext_path)
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext("WhateverGreen.kext", "1.6.9", self.constants.kext_path)
+                support.BuildSupport(self.model, self.constants, self.config).enable_kext("WhateverGreen.kext", "1.7.0", self.constants.kext_path)
             
                 # AMFIPass is critical for root patching (GPU drivers) on Tahoe
                 support.BuildSupport(self.model, self.constants, self.config).enable_kext("AMFIPass.kext", "1.4.1", self.constants.kext_path)
