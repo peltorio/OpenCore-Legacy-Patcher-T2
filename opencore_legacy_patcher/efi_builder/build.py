@@ -106,6 +106,7 @@ class BuildOpenCore:
             except Exception as e:
                 logging.error("Whoops, the app failed to inject the required kexts because of the following error:")
                 logging.exception("Stack Trace:") # This prints the full technical error
+                sys.exit(3)
 
         # macOS Sequoia support for Lilu plugins
         self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -lilubetaall"
@@ -189,6 +190,7 @@ class BuildOpenCore:
             plistlib.dump(self.config, Path(self.constants.plist_path).open("wb"), sort_keys=True)
         except Exception as e:
             logging.error(f"Function Error: {e}")
+            sys.exit(3)
     
     
     def _build_opencore(self) -> None:
