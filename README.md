@@ -93,7 +93,8 @@ All OCLP-Mod developers for KDK and application requirements, including laobamac
   * Help troubleshooting, determining fixes and writing patches
 * [vytska69](https://github.com/vytska69)
   * [developing patches for the T2 chip](https://github.com/vytska69/OpenCore-Legacy-Patcher)
-  * [adding USB port mapping for MacBook Air 2018-2019](https://github.com/vytska69/OpenCore-Legacy-Patcher) 
+  * [adding USB port mapping for MacBook Air 2018-2019](https://github.com/vytska69/OpenCore-Legacy-Patcher)
+  * [Developing Secure Enclave Processor (SEP) timeout patches](https://github.com/vytska69/OpenCore-Legacy-Patcher)
   * [workflow files](https://github.com/vytska69/OpenCore-Legacy-Patcher)
 * [EduCovas](https://github.com/covasedu)
   * [non-Metal patch set](https://github.com/moraea/non-metal-frameworks) for nVidia Tesla/Fermi/Maxwell/Pascal, AMD TeraScale 1/2, and Intel Core 1st/2nd Generation GPUs
