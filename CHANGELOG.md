@@ -1,4 +1,7 @@
 # OpenCore Legacy Patcher T2 changelog
+## 3.1.1 pre-alpha 2.1:
+This release fixes a config.plist bug that doesn't build OpenCore properly on non-T2 Macs. On T2 Macs, this issue remains: https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/23
+
 ## 3.1.1 pre-alpha 2:
 - upgrades config.plist to OpenCore 1.0.7
 - Upgrades WhateverGreen to 1.7.0
