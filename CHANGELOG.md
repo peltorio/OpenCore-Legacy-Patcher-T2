@@ -1,4 +1,11 @@
 # OpenCore Legacy Patcher T2 changelog
+## 3.1.1 pre-alpha 2:
+- upgrades config.plist to OpenCore 1.7.0
+- Upgrades WhateverGreen to 1.7.0
+- Upgrades Lilu to 1.72
+- Fix a vulnerability that lets attackers skip injecting necessary T2 kexts to launch a DoS attack - this vulnerability affects this repository only)
+- Fix a vulnerability that lets attackers claim the EFI is built when the EFI is broken to launch a DoS attack on any Mac - this vulnerability affects this repository only
+
 ## 3.1.1 pre-alpha 1:
 This version begins the upgrade from OpenCore 1.0.5 to 1.0.7 (but hasn't fully upgraded yet). Still it uses mostly 1.0.5.
 
