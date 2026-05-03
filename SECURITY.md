@@ -2,9 +2,10 @@
 
 ## Up to date Versions
 
-| Version | Supported          |
+| Version | Latest version          |
 | ------- | ------------------ |
 | 3.1.0 alpha 3 (the emergency update)  | :white_check_mark: |
+| 3.1.1 pre-alpha 5 (the emergency update)  | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
