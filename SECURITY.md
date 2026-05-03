@@ -11,8 +11,12 @@ Ensure you are running one of the latest up-to-date versions:
 
 ## Reporting a Vulnerability
 
-To report a security issue, please open a new issue on our bug tracker and follow these guidelines:
+We strongly encourage using **Private Vulnerability Reporting** to disclose security issues to maintainers securely and privately.
 
-1. **Use the `[Vulnerability]` Tag:** Prepend `[Vulnerability]` to the issue title to help us keep our tracker organized.
-2. **Safe Proof of Concepts (PoC):** If you include a Proof of Concept, ensure it does not contain or distribute any real malware.
-3. **Out-of-Scope Reports:** **Do not** report disabling SIP (System Integrity Protection) or AMFI (Apple Mobile File Integrity) as vulnerabilities. These are necessary components for bypassing minimum system requirements and will be dismissed.
+### How to report:
+1. Navigate to the **Security** tab of the repository.
+2. Click the **Report a vulnerability** button.
+3. Provide all necessary details and a Safe Proof of Concept (PoC) that does not contain or distribute real malware.
+
+### Out-of-Scope Reports:
+**Do not** report disabling SIP (System Integrity Protection) or AMFI (Apple Mobile File Integrity) as vulnerabilities. These are necessary components for bypassing minimum system requirements and will be dismissed.
