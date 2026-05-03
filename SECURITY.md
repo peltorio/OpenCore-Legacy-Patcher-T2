@@ -9,6 +9,4 @@
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
-
 To report a vulnerability, go to Issues, open a new issue about the vulnerability with a [Vulnerability] tag. I'm not against opening a vulnerability without a vulnerability tag, but with the vulnerability tag, my bugtracker will be cleaner and I will know exactly which issues are real issues and which of them are vulnerabilities.
