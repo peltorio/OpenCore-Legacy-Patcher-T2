@@ -1,4 +1,17 @@
 # OpenCore Legacy Patcher T2 changelog
+## 3.1.1 pre-alpha 5:
+This release:
+- upgrades OpenCore-DEBUG.zip to OpenCore 1.0.7
+- upgrades OpenCore-RELEASE.zip to OpenCore 1.0.7
+- Fixes a bug where when trying to build OpenCore EFI on unsupported T2 Macs it couldn't find the RestrictEvents kext
+- Updates macserial to OpenCore 1.0.7
+- Updates ocvalidate to OpenCore 1.0.7
+
+The following issues are known:
+https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/24
+The following issues remain to be tested whether are fixed or not:
+https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/18 and https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/8
+
 ## 3.1.1 pre-alpha 3:
 ## Security & Privacy Improvements
 Deprecated Third-Party KDK Endpoints: Completely removed dependency on third-party proxies (OMAPIv1 / OMAPIv2) for Kernel Debug Kit retrieval.
