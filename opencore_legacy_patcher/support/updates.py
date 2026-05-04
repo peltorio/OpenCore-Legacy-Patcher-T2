@@ -123,7 +123,7 @@ class CheckBinaryUpdates:
                     "Name": asset["name"],
                     "Version": latest_remote_version,
                     "Link": asset["browser_download_url"],
-                    "Github Link": f"https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/releases{latest_remote_version}",
+                    "Github Link": f"https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/releases/{latest_remote_version}",
                 }
                 return self.latest_details
 
