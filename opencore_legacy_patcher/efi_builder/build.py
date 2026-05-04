@@ -88,46 +88,10 @@ class BuildOpenCore:
         
         # 2. Safely apply -lilubetaall globally to follow Dortania's design
         current_args_str = self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"].get("boot-args", "")
-        current_args_set = set(current_argsstr.split())
+        current_args_set = set(current_args_str.split())
         current_args_set.add("-lilubetaall")
         self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] = " ".join(current_args_set)
         
-        # 3. Apply T2-specific kexts and arguments conditionally based on hardware, 
-        # but bypass the restriction that deletes them on target machines.
-        is_t2_mac = False
-        
-        # Method A: Check device features list (best for overall T2 detection)
-        if "T2_CHIP" in self.constants.device_properties.get(self.model, {}).get("Features", []):
-            is_t2_mac = True
-        
-        # Method B: Fallback to checking against known T2 model identifiers if features return empty
-        t2_models = ["iMacPro1,1", "iMac19,1", "iMac19,2", "MacBookPro15,1", "MacBookPro15,2", "MacBookPro15,3", "MacBookPro15,4", "MacBookPro16,1", "MacBookPro16,2", "MacBookPro16,3", "MacBookAir8,1", "MacBookAir8,2", "MacBookAir9,1", "Macmini8,1"]
-        if self.model in t2_models:
-            is_t2_mac = True
-            
-        if is_t2_mac:
-            try:
-                logging.info("- Adding T2-specific bypass kexts")
-                
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext("CryptexFixup.kext", "1.1.0", self.constants.kext_path)
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext("WhateverGreen.kext", "1.7.0", self.constants.kext_path)
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext("AMFIPass.kext", "1.4.1", self.constants.kext_path)
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext("RestrictEvents.kext", "1.3.5", self.constants.kext_path)
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext("FeatureUnlock.kext", "1.1.6", self.constants.kext_path)
-            
-                t2_args = {"-ibtcompatbeta", "-amfipassbeta", "revpatch=sbvmm"}
-                current_args_set = set(self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"].split())
-                
-                final_args_set = current_args_set.union(t2_args)
-                self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] = " ".join(final_args_set)
-            
-                self.config["Kernel"]["Quirks"]["DisableIoMapper"] = True
-                
-            except Exception as e:
-                logging.error("Whoops, the app failed to inject the required kexts because of the following error:")
-                logging.exception("Stack Trace:")
-                logging.info("Please try again later.")
-                sys.exit(3)
         # Call support functions
         for function in [
             firmware.BuildFirmware,
@@ -141,6 +105,62 @@ class BuildOpenCore:
             misc.BuildMiscellaneous
         ]:
             function(self.model, self.constants, self.config)
+
+        # ---------------------------------------------------------
+        # Force-injected T2 Kexts Block (Runs after support modules)
+        # ---------------------------------------------------------
+        is_t2_mac = False
+
+        if "T2_CHIP" in self.constants.device_properties.get(self.model, {}).get("Features", []):
+            is_t2_mac = True
+
+        t2_models = [
+            "iMacPro1,1", "iMac19,1", "iMac19,2", "MacBookPro15,1", 
+            "MacBookPro15,2", "MacBookPro15,3", "MacBookPro15,4", 
+            "MacBookPro16,1", "MacBookPro16,2", "MacBookPro16,3", 
+            "MacBookAir8,1", "MacBookAir8,2", "MacBookAir9,1", "Macmini8,1"
+        ]
+
+        if self.model in t2_models:
+            is_t2_mac = True
+
+        if is_t2_mac:
+            try:
+                logging.info("- Injecting T2-specific bypass kexts (post-process)")
+                
+                forced_kexts = [
+                    ("CryptexFixup.kext", "1.1.0"),
+                    ("WhateverGreen.kext", "1.7.0"),
+                    ("AMFIPass.kext", "1.4.1"),
+                    ("RestrictEvents.kext", "1.3.5"),
+                    ("FeatureUnlock.kext", "1.1.6")
+                ]
+                
+                for kext_name, version in forced_kexts:
+                    support.BuildSupport(self.model, self.constants, self.config).enable_kext(
+                        kext_name, version, self.constants.kext_path
+                    )
+                    
+                    # Ensure individual elements are explicitly enabled in the plist dictionary
+                    if "Kernel" in self.config and "Add" in self.config["Kernel"]:
+                        for kext_entry in self.config["Kernel"]["Add"]:
+                            if kext_entry.get("BundlePath") == kext_name:
+                                kext_entry["Enabled"] = True
+
+                # Add and merge T2 specific arguments
+                t2_args = {"-ibtcompatbeta", "-amfipassbeta", "revpatch=sbvmm"}
+                current_args_set = set(self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"].split())
+                
+                final_args_set = current_args_set.union(t2_args)
+                self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] = " ".join(final_args_set)
+            
+                self.config["Kernel"]["Quirks"]["DisableIoMapper"] = True
+                
+            except Exception as e:
+                logging.error("Whoops, the app failed to inject the required kexts because of the following error:")
+                logging.exception("Stack Trace:")
+                logging.info("Please try again later.")
+                sys.exit(3)
 
         # Work-around ocvalidate
         if self.constants.validate is False:
