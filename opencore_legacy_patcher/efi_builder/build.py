@@ -138,7 +138,7 @@ class BuildOpenCore:
                 
                 for kext_name, version in forced_kexts:
                     support.BuildSupport(self.model, self.constants, self.config).enable_kext(
-                        kext_name, version, self.constants.kext_path
+                        kext_name, version, self.constants.kexts_path # <-- Changed kext_path to kexts_path
                     )
                     
                     # Ensure individual elements are explicitly enabled in the plist dictionary
@@ -161,7 +161,7 @@ class BuildOpenCore:
                 logging.exception("Stack Trace:")
                 logging.info("Please try again later.")
                 sys.exit(3)
-
+                
         # Work-around ocvalidate
         if self.constants.validate is False:
             logging.info("- Adding bootmgfw.efi BlessOverride")
