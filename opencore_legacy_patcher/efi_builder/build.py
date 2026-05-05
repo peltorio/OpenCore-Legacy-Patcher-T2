@@ -82,8 +82,27 @@ class BuildOpenCore:
 
         # Patches for unsupported T2 Macs
         # We check if the current model has the T2_CHIP feature flag
+        # T2 Macs with mantissa-speed panic when USBMap-like kexts are injected
+        t2_mantissa_bug_models = [
+            "MacBookAir8,1",
+            "MacBookAir8,2",
+            "MacBookAir9,1",
+            "MacBookPro16,2",
+        ]
         if "T2_CHIP" in self.constants.device_properties.get(self.model, {}).get("Features", []):
             try:
+                if self.model in t2_mantissa_bug_models:
+                logging.info(f"- {self.model}: Stripping USBMap/UTBMap/USBToolBox from Kernel->Add to avoid mantissa panic")
+                try:
+                    kernel = self.config.setdefault("Kernel", {})
+                    kernel_add = kernel.get("Add", [])
+                    filtered = [
+                        entry for entry in kernel_add
+                        if entry.get("BundlePath") not in ("USBMap.kext", "UTBMap.kext", "USBToolBox.kext")
+                    ]
+                    kernel["Add"] = filtered
+                except Exception as e:
+                    logging.error(f"Failed to strip USBMap-style kexts on T2: {e}")
                 logging.info("- Adding T2-specific bypass kexts")
                 # 1. Helper Kexts
                 support.BuildSupport(self.model, self.constants, self.config).enable_kext("CryptexFixup.kext", "1.1.0", self.constants.kext_path)
