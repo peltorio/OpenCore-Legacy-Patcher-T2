@@ -1,11 +1,11 @@
 # OpenCore Legacy Patcher T2 changelog
 ## 3.1.1 pre-alpha release candidate / 3.1.1 Voralpha Releasekandidat 3:
 This release:
-- Replaces broken ocvalidate and macserial with a functioning one to fix https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/29
+- Replaces broken ocvalidate and macserial with a functioning one to fix https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/29 . It is fixed by storing the ocvalidate and macserial in a zip file called OpenCoreLegacyPatcherTools.zip and when launching OpenCore Legacy Patcher T2, it will extract that file and copy these 2 files automatically for you in the right directory.
 - Continues to roll out patches to fix the T2 controller panic AppleUSBXHCI::createPorts: unsupported speed mantissa 5830 exponent 2 panic when pressing ->
 
 Dieses Version:
-- Ersetzt das kapputen ocvalidate und macserial mit einen, die funktioniert, um den Fehler https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/29 zu verbessern .
+- Ersetzt das kapputen ocvalidate und macserial mit einen, die funktioniert, um den Fehler https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/29 zu verbessern . Dieses Fehler ist verbessert, indem die Dateien stattdessen in das Zip-Datei OpenCoreLegacyPatcherTools.zip sein. Und wenn Sie OpenCore Legacy Patcher T2 öffnet, wird es automatisch extrahiert und denn diese Dateien kopiert in das richtige Ordner.
 - Weiterfahren, Verbesserungen auszurollen, um das Fehler, indem beim Anklicken der Pfeil -> in Sprache auswählen, der T2-Kontroller mit dem Fehler AppleUSBXHCI::createPorts: unsupported speed mantissa 5830 exponent 2 panic abstürzt
 
 ## 3.1.1 pre-alpha release candidate / 3.1.1 Voralpha Releasekandidat 2:
