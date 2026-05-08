@@ -82,10 +82,7 @@ class BuildOpenCore:
 
         if "T2_CHIP" in self.constants.device_properties.get(self.model, {}).get("Features", []):
             try:
-                logging.info("- Adding T2-specific bypass kexts")
-            
-                # AMFIPass is critical for root patching (GPU drivers) on Tahoe
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext("AMFIPass.kext", "1.4.1", self.constants.kext_path)
+                logging.info("- Adding T2-specific bypass NVRAM variables")
             
                 # Append T2-specific boot args to the existing boot-args string
                 t2_args = " -ibtcompatbeta -amfipassbeta"
