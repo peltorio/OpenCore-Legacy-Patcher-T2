@@ -8,6 +8,7 @@ import logging
 import binascii
 import plistlib
 import subprocess
+import sys
 
 from pathlib import Path
 
