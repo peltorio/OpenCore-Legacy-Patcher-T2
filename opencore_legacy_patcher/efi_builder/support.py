@@ -80,26 +80,43 @@ class BuildSupport:
     def enable_kext(self, kext_name: str, kext_version: str, kext_path: Path, check: bool = False) -> None:
         """
         Enables a kext in the config.plist
-
-        Parameters:
-            kext_name     (str): Name of the kext
-            kext_version  (str): Version of the kext
-            kext_path    (Path): Path to the kext
         """
-
         kext: dict = self.get_kext_by_bundle_path(kext_name)
 
         if callable(check) and not check():
-            # Check failed
             return
 
         if kext["Enabled"] is True:
             return
 
-        logging.info(f"- Adding {kext_name} {kext_version}")
-        shutil.copy(kext_path, self.constants.kexts_path)
-        kext["Enabled"] = True
+        # Handle subdirectories (like Acidanthera)
+        source_path = kext_path / kext_name
+        if not source_path.exists():
+            # Search recursively for the kext if not in root
+            potential_paths = list(kext_path.glob(f"**/{kext_name}"))
+            if potential_paths:
+                source_path = potential_paths[0]
+            else:
+                logging.info(f"- Failed to find {kext_name} in {kext_path}")
+                return
 
+        logging.info(f"- Adding {kext_name} {kext_version}")
+
+        # Use copytree for directory bundles (.kext)
+        destination_path = self.constants.kexts_path / kext_name
+        
+        try:
+            if destination_path.exists():
+                if destination_path.is_dir():
+                    shutil.rmtree(destination_path)
+                else:
+                    destination_path.unlink()
+            
+            shutil.copytree(source_path, destination_path)
+            kext["Enabled"] = True
+        except Exception as e:
+            logging.info(f"- Error injecting {kext_name}: {e}")
+            raise e
 
     def sign_files(self) -> None:
         """
