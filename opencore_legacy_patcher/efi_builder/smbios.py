@@ -111,11 +111,17 @@ class BuildSMBIOS:
 
         if self.constants.override_smbios == "Default":
             if self.constants.serial_settings != "None":
-                logging.info("- Setting macOS Monterey Supported SMBIOS")
-                if self.constants.allow_native_spoofs is True:
-                    spoofed_model = self.model
-                else:
-                    spoofed_model = generate_smbios.set_smbios_model_spoof(self.model)
+                try:
+                    logging.info("- Setting macOS Monterey Supported SMBIOS")
+                    if self.constants.allow_native_spoofs is True:
+                        spoofed_model = self.model
+                    else:
+                        spoofed_model = generate_smbios.set_smbios_model_spoof(self.model)
+                except Exception as e:
+                    logging.error("Whoops, setting macOS Monterey SMBIOS failed because of the following error:")
+                    logging.exception("Stack Trace:") # This prints the full technical error
+                    logging.info("Please try again later.")
+                    sys.exit(3)
         else:
             spoofed_model = self.constants.override_smbios
         logging.info(f"- Using Model ID: {spoofed_model}")
@@ -133,15 +139,33 @@ class BuildSMBIOS:
             self.config["#Revision"]["Spoofed-Model"] = f"{self.spoofed_model} - {self.constants.serial_settings}"
 
         if self.constants.serial_settings == "Moderate":
-            logging.info("- Using Moderate SMBIOS patching")
-            self._moderate_serial_patch()
+            try:
+                logging.info("- Using Moderate SMBIOS patching")
+                self._moderate_serial_patch()
+            except Exception as e:
+                logging.error("Moderate SMBIOS spoofing failed because of the following error:")
+                logging.exception("Stack Trace:") # This prints the full technical error
+                logging.info("Please try again later.")
+                sys.exit(3)
         elif self.constants.serial_settings == "Advanced":
-            logging.info("- Using Advanced SMBIOS patching")
-            self._advanced_serial_patch()
+            try:
+                logging.info("- Using Advanced SMBIOS patching")
+                self._advanced_serial_patch()
+            except Exception as e:
+                logging.error("Advanced SMBIOS spoofing failed because of the following error:")
+                logging.exception("Stack Trace:") # This prints the full technical error
+                logging.info("Please try again later.")
+                sys.exit(3)
         elif self.constants.serial_settings == "Minimal":
-            logging.info("- Using Minimal SMBIOS patching")
-            self.spoofed_model = self.model
-            self._minimal_serial_patch()
+            try:
+                logging.info("- Using Minimal SMBIOS patching")
+                self.spoofed_model = self.model
+                self._minimal_serial_patch()
+            except Exception as e:
+                logging.error("Minimal SMBIOS spoofing failed because of the following error:")
+                logging.exception("Stack Trace:") # This prints the full technical error
+                logging.info("Please try again later.")
+                sys.exit(3)
         else:
             # Update DataHub to resolve Lilu Race Condition
             # macOS Monterey will sometimes not present the boardIdentifier in the DeviceTree on UEFI 1.2 or older Mac,
