@@ -432,13 +432,7 @@ class BuildMiscellaneous:
     def _t2_handling(self) -> None:
         """
         T2 Security Chip Handler
-
-        MacBookAir8,1/8,2 support macOS Sequoia with OpenCore Legacy Patcher almost completely out of the box, so their built-in
-        T2 kexts (AppleSSE, AppleKeyStore, AppleCredentialManager) must NOT
-        be blocked or replaced. T1 kexts communicate via USB/SPI and cannot
-        talk to the T2's PCIe/iBridge SEP; injecting them causes a silent hang
-        at the Apple logo. The only OCLP-side change needed for T2 Macs is the
-        EFI/BOOT/BOOTx64.efi layout in install.py (handled there).
+        T2 Macs shouldn't be patched with T1 patches because on T2 Macs, the T2 controlls the USB controller, while on T1 Macs, that's not the case.
         """
         if self.model not in ["MacBookAir8,1", "MacBookAir8,2", "Macmini8,1", "iMacPro1,1", "MacBookPro15,2", "MacBookPro15,1", "MacBookPro15,3", "MacBookPro15,4", "MacBookPro16,3"]:
             return
@@ -474,7 +468,7 @@ class BuildMiscellaneous:
         try:
             logging.info("Enabling AMFIPass.kext")
             # AMFIPass is critical for root patching (GPU drivers) on Tahoe
-            support.BuildSupport(self.model, self.constants, self.config).enable_kext("AMFIPass.kext", "1.4.1", self.constants.kext_path)
+            support.BuildSupport(self.model, self.constants, self.config).enable_kext("AMFIPass.kext", "1.4.1", self.constants.kexts_path)
         except Exception as e:
             logging.error("Injecting AMFIPass.kext failed because of the following error:")
             logging.exception("Stack Trace:") # This prints the full technical error
