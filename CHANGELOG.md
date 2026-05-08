@@ -1,4 +1,56 @@
 # OpenCore Legacy Patcher T2 changelog
+## 4.0.0 alpha 1:
+This release:
+- fixes a corrupted USB-Map.plist
+- Fixes a bug where CryptexFixup isn't injected properly
+- Fixed the following vulnerabilities:
+1. Nested‑dictionary KeyError → DoS vulnerability (FIXED)
+Fixed: attacker cannot break the build by removing or corrupting NVRAM keys
+Fixed: malformed templates no longer crash the builder
+Fixed: KeyError‑based DoS is gone
+2. Type‑poisoning vulnerability (FIXED)
+Fixed: attacker cannot poison the plist by replacing dicts with other types
+Fixed: builder no longer crashes on malformed GUID nodes
+3. Uncaught exceptions in top‑level build flow (FIXED)
+Fixed: unhandled exceptions no longer kill the builder unpredictably
+Fixed: clearer diagnostics
+Fixed: safer failure modes
+4. Silent failure vulnerability (FIXED)
+Fixed: failures are now visible and diagnosable
+5. Implicit trust in template structure (FIXED)
+Fixed: template corruption no longer breaks the build
+Fixed: builder no longer trusts external input blindly
+6. Path raversal vulnerability that allows an attacker to crash the builder if the path doesn't exist, is corrupted or pointed somewhere unexpectedly.
+7. Added error handling for SMC and USB Rename patch enabling. This fixes the vulnerability where an attacker may silently crash the builder or launch a denial of service attack.
+8. Added error handling for SMBIOS spoofing processes to log exceptions and exit gracefully. This fixes a vulnerability that lets attackers to feed with fake SMBIOS data and hide errors to launch DoS.
+
+
+Diese Version:
+- Behebt eine beschädigte USB-Map.plist
+- Behebt einen Fehler, der die korrekte Einbindung von CryptexFixup verhinderte
+- Behebt die folgenden Sicherheitslücken:
+1. KeyError → DoS-Sicherheitslücke (BEHOBEN)
+Behoben: Angreifer können den Build nicht mehr durch Entfernen oder Beschädigen von NVRAM-Schlüsseln unterbrechen.
+Behoben: Fehlerhafte Templates führen nicht mehr zum Absturz des Builders.
+Behoben: KeyError-basierte DoS-Angriffe sind behoben.
+2. Typvergiftungs-Sicherheitslücke (BEHOBEN)
+Behoben: Angreifer können die plist nicht mehr durch Ersetzen von Dictionaries durch andere Typen manipulieren.
+Behoben: Der Builder stürzt nicht mehr bei fehlerhaften GUID-Knoten ab.
+3. Nicht abgefangene Ausnahmen im Build-Ablauf der obersten Ebene (BEHOBEN)
+Behoben: Nicht behandelte Ausnahmen führen nicht mehr unvorhersehbar zum Absturz des Builders.
+Behoben: Klarere Diagnoseinformationen.
+Behoben: Sicherere Fehlermodi.
+4. Sicherheitslücke für stille Fehler. (BEHOBEN)
+Behoben: Fehler sind nun sichtbar und diagnostizierbar.
+5. Implizites Vertrauen in die Template-Struktur (BEHOBEN)
+Behoben: Template-Beschädigung führt nicht mehr zum Build-Abbruch.
+Behoben: Der Builder vertraut externen Eingaben nicht mehr blind.
+6. Pfad-Raversal-Schwachstelle, die es Angreifern ermöglicht, den Builder zum Absturz zu bringen, wenn der Pfad nicht existiert, beschädigt ist oder unerwartet auf ein anderes Ziel verweist.
+
+7. Fehlerbehandlung für die Aktivierung des SMC- und USB-Rename-Patches hinzugefügt. Dies behebt die Schwachstelle, durch die ein Angreifer den Builder unbemerkt zum Absturz bringen oder einen Denial-of-Service-Angriff starten konnte.
+
+8. Fehlerbehandlung für SMBIOS-Spoofing-Prozesse hinzugefügt, um Ausnahmen zu protokollieren und ordnungsgemäß zu beenden. Dies behebt eine Schwachstelle, die es Angreifern ermöglicht, gefälschte SMBIOS-Daten einzuspeisen und Fehler zu verbergen, um einen DoS-Angriff zu starten.
+
 ## 3.1.1 pre-alpha release candidate / 3.1.1 Voralpha Releasekandidat 3:
 This release:
 - Replaces broken ocvalidate and macserial with a functioning one to fix https://github.com/albert-mueller/OpenCore-Legacy-Patcher-T2/issues/29 . It is fixed by storing the ocvalidate and macserial in a zip file called OpenCoreLegacyPatcherTools.zip and when launching OpenCore Legacy Patcher T2, it will extract that file and copy these 2 files automatically for you in the right directory.
