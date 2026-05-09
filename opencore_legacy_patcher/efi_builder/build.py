@@ -224,10 +224,10 @@ class BuildOpenCore:
 
         # Generate OpenCore Configuration
         try:
-            logging.info("Generating OpenCore configuration for {self.model} ...")
+            logging.info(f"Generating OpenCore configuration for {self.model} ...")
             self._build_efi()
         except Exception as e:
-            logging.error("Whoops, Generating OpenCore configuration for {self.model} because of the following error:")
+            logging.error(f"Whoops, Generating OpenCore configuration for {self.model} because of the following error:")
             logging.exception("Stack Trace:") # This prints the full technical error
             logging.info("Please try again later.")
             sys.exit(3)
@@ -237,7 +237,7 @@ class BuildOpenCore:
             support.BuildSupport(self.model, self.constants, self.config).cleanup()
             self._save_config()
         except Exception as e:
-            logging.error("Whoops, spoofing the SMBIOS for {self.model} failed because of the following error:")
+            logging.error(f"Whoops, spoofing the SMBIOS for {self.model} failed because of the following error:")
             logging.exception("Stack Trace:") # This prints the full technical error
             logging.info("Please try again later.")
             sys.exit(3)
