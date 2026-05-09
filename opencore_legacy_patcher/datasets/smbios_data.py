@@ -591,25 +591,6 @@ smbios_dictionary = {
             "NVMe",
         ],
     },
-    "AAPL_MacBookAir9,1": {
-        # AppleInternal MacBookAir9,1
-        # True Model unknown
-        "Board ID": "Mac-0CFF9C7C2B63DF8D",
-        "FirmwareFeatures": "0x8FFAFF06E",
-        "SecureBootModel": "x589icly",
-        "CPU Generation": cpu_data.CPUGen.ice_lake.value,
-        "Max OS Supported": os_data.os_data.sequoia,
-        "Wireless Model": device_probe.Broadcom.Chipsets.AppleBCMWLANBusInterfacePCIe,
-        "Bluetooth Model": bluetooth_data.bluetooth_data.UART,
-        "Screen Size": 13,
-        "Ethernet Chipset": None,
-        "Stock GPUs": [
-            device_probe.Intel.Archs.Ice_Lake
-        ],
-        "Stock Storage": [
-            "NVMe",
-        ],
-    },
     "MacBookAir10,1": {
         "Board ID": None,
         "FirmwareFeatures": None,
