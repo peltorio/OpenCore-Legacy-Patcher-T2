@@ -98,7 +98,8 @@ To run the project from source, see here: [Build and run from source](./SOURCE.m
   * [developing patches for the T2 chip](https://github.com/vytska69/OpenCore-Legacy-Patcher)
   * [Developing Secure Enclave Processor (SEP) timeout patches](https://github.com/vytska69/OpenCore-Legacy-Patcher)
   * [workflow files](https://github.com/vytska69/OpenCore-Legacy-Patcher)
-
+* [kodeaqua](https://github.com/kodeaqua)
+  * for research on MacBook Air 2018-2019 hardware to fix boot issues
 * [GUTY345](https://github.com/GUTY345)
   * for fixing a bug in OpenCore Legacy Patcher T2 where USB-Map.plist's syntax was invalid and SMBIOS spoofing bug that prevented SMBIOS spoofing from working properly on T2 Macs
 * [EduCovas](https://github.com/covasedu)
