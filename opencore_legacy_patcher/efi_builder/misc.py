@@ -506,7 +506,10 @@ class BuildMiscellaneous:
         # T2 Support: Enable disk access (AMFI bypass), graphics fixes, and boot delay
         logging.info("- Adding T2-specific boot arguments for macOS 15/26")
         self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -v rddelay=5 amfi=0x80 igfxfw=2 igfxonln=1 revpatch=sbvmm"
-
+        logging.info("-Adding vmmroot=1 arguments")
+        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " vmmroot=1"
+        logging.info("-Set NVRAM variable to -disable_ext_panics")
+        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -disable_ext_panics"
         # After ~20 SEP mailbox timeouts AppleSEPManagerIntel panics.
         # Patch converts the panic call to an early return.
         logging.info("- Enabling AppleSEPManager SEP timeout panic patch for T2 Macs")
