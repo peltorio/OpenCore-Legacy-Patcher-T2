@@ -7,7 +7,6 @@ import logging
 import binascii
 import sys
 import os
-import plistb
 
 from pathlib import Path
 
