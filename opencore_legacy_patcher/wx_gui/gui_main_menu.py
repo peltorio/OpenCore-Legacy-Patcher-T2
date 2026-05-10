@@ -134,6 +134,13 @@ class MainFrame(wx.Frame):
                 ],
                 "icon": str(self.constants.icns_resource_path / "OC-Support.icns"),
             },
+            "✨ Ask Gemini": {
+                "function": self.on_gemini_help,
+                "description": [
+                    "AI Troubleshooting and",
+                    "Installation help.",
+                ],
+            },
         }
         button_x = 30
         button_y = model_label.GetPosition()[1] + 30
@@ -401,3 +408,21 @@ Please check the Github page for more information about this release."""
     def _onWebviewNav(self, event):
         url = event.GetURL()
         webbrowser.open(url)
+    
+    def on_gemini_help(self, event: wx.Event = None):
+        """
+        Launch a native wxPython WebView window for Gemini
+        """
+        gemini_frame = wx.Frame(None, title="OCLP AI Assistant (Gemini)", size=(450, 800))
+        panel = wx.Panel(gemini_frame)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        # Create the WebView inside the frame
+        browser = wx.html2.WebView.New(panel)
+        browser.LoadURL("https://gemini.google.com")
+        
+        sizer.Add(browser, 1, wx.EXPAND)
+        panel.SetSizer(sizer)
+        
+        gemini_frame.Centre()
+        gemini_frame.Show()
