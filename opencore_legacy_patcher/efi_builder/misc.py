@@ -525,42 +525,6 @@ class BuildMiscellaneous:
         logging.info("-Add Cpuid1Data and Cpuid1Mask NVRAM variables")
         self.config["Kernel"]["Emulate"]["Cpuid1Data"] = binascii.unhexlify("00000000000000000000000000000080")
         self.config["Kernel"]["Emulate"]["Cpuid1Mask"] = binascii.unhexlify("00000000000000000000000000000080")
-        import plistlib
-
-# Path to your OpenCore config.plist
-PLIST_PATH = "config.plist"
-UUID = "7C436110-AB2A-4BBB-A880-FE41995C9F82"
-
-# Variables we want to ensure are deleted/overwritten
-VARS_TO_DELETE = ["boot-args", "csr-active-config"]
-
-def patch_nvram_delete(path):
-    with open(path, 'rb') as f:
-        config = plistlib.load(f)
-
-    # 1. Navigate to NVRAM > Delete
-    nvram_delete = config.setdefault("NVRAM", {}).setdefault("Delete", {})
-
-    # 2. Check if our T2 UUID exists, if not, create it as an empty list
-    if UUID not in nvram_delete:
-        nvram_delete[UUID] = []
-    
-    # 3. Add the specific variables to the list if they aren't already there
-    for var in VARS_TO_DELETE:
-        if var not in nvram_delete[UUID]:
-            nvram_delete[UUID].append(var)
-            print(f"Added {var} to Delete section for {UUID}")
-
-    # 4. Save the modified plist back to disk
-    with open(path, 'wb') as f:
-        plistlib.dump(config, f)
-    
-    print("Successfully updated NVRAM > Delete.")
-
-if __name__ == "__main__":
-    patch_nvram_delete(PLIST_PATH)
-
-
         # After ~20 SEP mailbox timeouts AppleSEPManagerIntel panics.
         # Patch converts the panic call to an early return.
         logging.info("- Enabling AppleSEPManager SEP timeout panic patch for T2 Macs")
@@ -617,3 +581,37 @@ if __name__ == "__main__":
         if not success_flag:
             logging.error("CRITICAL: Failed to enable or inject necessary Apple Secure Enclave Processor patches. Exiting...")
             sys.exit(3)
+
+
+# Path to your OpenCore config.plist
+PLIST_PATH = "config.plist"
+UUID = "7C436110-AB2A-4BBB-A880-FE41995C9F82"
+
+# Variables we want to ensure are deleted/overwritten
+VARS_TO_DELETE = ["boot-args", "csr-active-config"]
+
+def patch_nvram_delete(path):
+    with open(path, 'rb') as f:
+        config = plistlib.load(f)
+
+    # 1. Navigate to NVRAM > Delete
+    nvram_delete = config.setdefault("NVRAM", {}).setdefault("Delete", {})
+
+    # 2. Check if our T2 UUID exists, if not, create it as an empty list
+    if UUID not in nvram_delete:
+        nvram_delete[UUID] = []
+    
+    # 3. Add the specific variables to the list if they aren't already there
+    for var in VARS_TO_DELETE:
+        if var not in nvram_delete[UUID]:
+            nvram_delete[UUID].append(var)
+            print(f"Added {var} to Delete section for {UUID}")
+
+    # 4. Save the modified plist back to disk
+    with open(path, 'wb') as f:
+        plistlib.dump(config, f)
+    
+    print("Successfully updated NVRAM > Delete.")
+
+if __name__ == "__main__":
+    patch_nvram_delete(PLIST_PATH)
