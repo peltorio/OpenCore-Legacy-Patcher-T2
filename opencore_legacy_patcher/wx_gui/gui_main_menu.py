@@ -69,6 +69,7 @@ class MainFrame(wx.Frame):
             - Create macOS Installer
             - Settings
             - Help
+            - Ask Gemini
           - Text:        Copyright
         """
 
