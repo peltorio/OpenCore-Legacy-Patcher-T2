@@ -198,9 +198,12 @@ class MainFrame(wx.Frame):
                 button.Centre(wx.HORIZONTAL)
                 description_label.Centre(wx.HORIZONTAL)
 
+            # Always track the furthest point down the window
+            if button_y > max_height:
+                max_height = button_y
+
             index += 1
             if index == rollover:
-                max_height = button_y
                 button_x = 320
                 button_y = model_label.GetPosition()[1] + 30
 
