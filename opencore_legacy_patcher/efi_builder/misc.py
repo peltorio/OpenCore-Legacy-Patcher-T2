@@ -491,7 +491,7 @@ class BuildMiscellaneous:
                         "Replace": b"\xEB\x0C\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90",
                         "MinKernel": "24.0.0"
                     }
-            self.config["Kernel"]["Patch"].append(usb_host_patch)
+                    self.config["Kernel"]["Patch"].append(usb_host_patch)
                 except Exception as e:
                     logging.error("We have some troubles injecting AppleUSBHostPort power state timeout patches. The error is the following:")
                     logging.exception("Stack Trace:") # This prints the full technical error
