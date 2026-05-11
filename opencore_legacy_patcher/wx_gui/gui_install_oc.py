@@ -302,21 +302,27 @@ class InstallOCFrame(wx.Frame):
                 return
 
             elif not self.constants.custom_model:
-                # Use the model already stored in constants instead of probing again
-                model_identifier = self.constants.computer_model
-                
-                # Define the list of T2-equipped Macs
-                t2_models = [
-                    "MacBookAir8,1", "MacBookAir8,2", "MacBookAir9,1", 
-                    "Macmini8,1", "iMacPro1,1", "MacBookPro15,2", 
-                    "MacBookPro15,1", "MacBookPro15,3", "MacBookPro15,4", 
-                    "MacBookPro16,1", "MacBookPro16,2", "MacBookPro16,3", "MacBookPro16,4"
-                ]
-
-                if model_identifier in t2_models:
-                    gui_support.RestartHost(self).restart(message="OpenCore has finished installing to disk.\n\nYou will need to restart. Once the screen becomes black, prepare your fingers to press command-R.\n\n When you hear the chime, press and hold command-R until you boot into macOS Recovery. \n\n Once done, go to Utilities > Startup Security Utility. Then set Secure Boot to No Security and \n\n then set up Allowed boot media to Allow startup from external bootable media. Then, close out of this window and go to Utilities > Terminal. \n\n Then, type csrutil disable && csrutil authenticated-boot disable. Then hit enter. \n\n Then restart your Mac and hold the option key and select OpenCore/Boot's EFI. \n\n Would you like to reboot?")
-                else:
-                    gui_support.RestartHost(self).restart(message="OpenCore has finished installing to disk.\n\nYou will need to restart and hold the Option key and select OpenCore/Boot EFI's option.\n\nWould you like to reboot?")
+                try:
+                    # Use target_model, which is the standard attribute in OCLP Constants
+                    model_identifier = self.constants.target_model
+                    
+                    logging.info(f"Checking instructions for model: {model_identifier}")
+    
+                    t2_models = [
+                        "MacBookAir8,1", "MacBookAir8,2", "MacBookAir9,1", 
+                        "Macmini8,1", "iMacPro1,1", "MacBookPro15,2", 
+                        "MacBookPro15,1", "MacBookPro15,3", "MacBookPro15,4", 
+                        "MacBookPro16,1", "MacBookPro16,2", "MacBookPro16,3", "MacBookPro16,4"
+                    ]
+    
+                    if model_identifier in t2_models:
+                        gui_support.RestartHost(self).restart(message="OpenCore has finished installing to disk.\n\nYou will need to restart. Once the screen becomes black, prepare your fingers to press command-R.\n\n When you hear the chime, press and hold command-R until you boot into macOS Recovery. \n\n Once done, go to Utilities > Startup Security Utility. Then set Secure Boot to No Security and \n\n then set up Allowed boot media to Allow startup from external bootable media. Then, close out of this window and go to Utilities > Terminal. \n\n Then, type csrutil disable && csrutil authenticated-boot disable. Then hit enter. \n\n Then restart your Mac and hold the option key and select OpenCore/Boot's EFI. \n\n Would you like to reboot?")
+                    else:
+                        gui_support.RestartHost(self).restart(message="OpenCore has finished installing to disk.\n\nYou will need to restart and hold the Option key and select OpenCore/Boot EFI's option.\n\nWould you like to reboot?")
+                except Exception as e:
+                    logging.error("Building OpenCore is complete but the popup crashed due to the following error:")
+                    logging.exception("Stack Trace:") # This prints the full technical error
+                    logging.info("This issue occurs due to invalid syntax. Please check the syntax of gui_install_oc.py.")
             else:
                 popup_message = wx.MessageDialog(
                     self,
