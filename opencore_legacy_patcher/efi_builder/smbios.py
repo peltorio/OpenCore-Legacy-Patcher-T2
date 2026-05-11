@@ -199,7 +199,7 @@ class BuildSMBIOS:
         # USB Map and CPUFriend Patching
         if (
             self.constants.allow_oc_everywhere is False
-            and self.model not in ["Xserve2,1", "Dortania1,1"]
+            and self.model not in ["Xserve2,1", "Dortania1,1", "MacBookAir8,1", "MacBookAir8,2", "MacBookAir9,1", "MacBookPro16,3"]
             and ((self.model in model_array.Missing_USB_Map or self.model in model_array.Missing_USB_Map_Ventura) or self.constants.serial_settings in ["Moderate", "Advanced"])
         ):
             new_map_ls = Path(self.constants.map_contents_folder) / Path("Info.plist")
