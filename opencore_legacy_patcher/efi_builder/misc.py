@@ -477,10 +477,44 @@ class BuildMiscellaneous:
                 else:
                     logging.info("This is an extra check to make sure that no USB port mapping is injected onto Macs affected by Unsupported Mantissa speed panics.")
                     logging.info("No USB-Map.kext or USB-Tahoe.kext is found. Continuing onto the next step...")
+                try:
+                    logging.info("Injecting Disable AppleUSBHostPort power state timeout patches...")
+                    {
+                        "Arch": "x86_64",
+                        "Comment": "Disable AppleUSBHostPort power state timeout",
+                        "Enabled": True,
+                        "Identifier": "com.apple.driver.AppleUSBHostPort",
+                        "Find": b"\x48\x85\xC0\x74\x08\x48\x8B\x00\x48\x8B\x40\x28\xFF\xE0",
+                        "Replace": b"\xEB\x0C\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90\x90",
+                        "MinKernel": "24.0.0"
+                    }
+                    self.config["Kernel"]["Patch"].append(new_patch)
+                except Exception as e:
+                    logging.error("We have some troubles injecting AppleUSBHostPort power state timeout patches. The error is the following:")
+                    logging.exception("Stack Trace:") # This prints the full technical error
+                    logging.info("Aborting...")
+                    sys.exit(3)
+                try:
+                    logging.info("Patch AppleUSBVHCI to skip transition timeout...")
+                    {
+                        "Arch": "x86_64",
+                        "Comment": "Patch AppleUSBVHCI to skip transition timeout",
+                        "Enabled": True,
+                        "Identifier": "com.apple.driver.AppleUSBVHCI",
+                        "Find": b"\x48\x8B\x05\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\x41\xBB\x01\x00\x00\x00",
+                        "Replace": b"\x48\x8B\x05\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\x41\xBB\x00\x00\x00\x00",
+                        "MinKernel": "24.0.0"
+                    }
+                    self.config["Kernel"]["Patch"].append(new_patch)
+                except Exception as E:
+                    logging.error("We have some troubles injecting AppleUSBVHCI skip transition timeout patches. The error is the following:")
+                    logging.exception("Stack Trace:") # This prints the full technical error
+                    logging.info("Aborting...")
+                    sys.exit(3)
+                    
             except Exception as E:
-                logging.error("We have some troubles disabling USB-Map.kext and USB-Map-Tahoe.kext. It may be because the file is missing or the syntax is invalid. The error is the following:")
+                logging.error("We have some troubles injecting Unsupported Mantissa speed patches. It may be because files are missing or the syntax is invalid. The error is the following:")
                 logging.exception("Stack Trace:") # This prints the full technical error
-                logging.info("Please report this issue.")
                 logging.info("Aborting...")
                 sys.exit(3)
             try:
