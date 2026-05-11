@@ -476,7 +476,8 @@ class BuildMiscellaneous:
             sys.exit(3)
         if self.model in ["MacBookAir8,1", "MacBookAir8,2", "MacBookAir9,1", "MacBookPro16,3"]:
             logging.info(f"- {self.model}: Applying Unsupported Mantissa Speed kernel panic patches")
-            logging.info(f"- {self.model}: Disable USB-Map.kext or/and USB-Map-Tahoe.kext to avoid unsupported mantissa speed panics")
+            logging.info(f"- {self.model}: Disable USB-Map.kext or/and USB-Map-Tahoe.kext if enabled to avoid unsupported mantissa speed panics.")
+            # Disable USB-Map.kext and USB-Map-Tahoe.kext since on these models I can't rely on guesswork whether USB mapping that must be disabled on T2 macs is there or not.
             try:
                 if support.BuildSupport(self.model, self.constants, self.config).get_kext_by_bundle_path("USB-Map.kext")["Enabled"] == True:
                     logging.info("We found USB-Map.kext. Disabling...")
@@ -485,12 +486,18 @@ class BuildMiscellaneous:
                     logging.info("We found USB-Map-Tahoe.kext. Disabling...")
                     support.BuildSupport(self.model, self.constants, self.config).get_kext_by_bundle_path("USB-Map-Tahoe.kext")["Enabled"] = False
                 else:
-                    logging.info("We couldn't find USB-Map.kext, nor USB-Map-Tahoe.kext, skipping disable...")
+                    logging.error("We couldn't find USB-Map.kext, nor USB-Map-Tahoe.kext because of the following error:")
+                    logging.exception("Stack Trace:") # This prints the full technical error
+                    logging.info("Skipping disable...")
             except Exception as E:
-                logging.info("We have some troubles disabling USB-Map.kext and USB-Map-Tahoe.kext. It may be because the file is missing or the synthax is invalid. Skipping...")
+                logging.error("We have some troubles disabling USB-Map.kext and USB-Map-Tahoe.kext. It may be because the file is missing or the syntax is invalid. The error is the following:")
+                logging.exception("Stack Trace:") # This prints the full technical error
+                logging.info("Please report this issue.")
+                logging.info("Aborting...")
+                sys.exit(3)
             try:
                 logging.info("- Skipping Language and Region selection")
-                # Sets the language to English (Universal) and avoids the initial picker
+                # Sets the language to English (Universal) and avoid the initial picker
                 self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["prev-lang:kbd"] = "en-US:0"
             except Exception as e:
                 logging.error("Skipping language and region selection failed because of the following error:")
