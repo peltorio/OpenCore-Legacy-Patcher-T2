@@ -531,14 +531,17 @@ class BuildMiscellaneous:
                 logging.info("Please try again later.")
                 logging.info(f"On your {self.model}, skipping the language selection is absolutely required to avoid Unsupported Mantissa speed kernel panics.")
                 sys.exit(3)
-        # Sequoia installer checks hardware compatibility and refuses to proceed
-        # silently (gray screen hang) on unsupported T2 Macs. This bypasses it.
-        logging.info("- Adding -no_compat_check for T2 Macs running unsupported macOS versions")
-        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " "
 
         # T2 Support: Enable disk access (AMFI bypass), graphics fixes, and boot delay
-        logging.info("- Adding T2-specific boot arguments for macOS 15/26")
-        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -v rddelay=5 amfi=0x80 igfxfw=2 igfxonln=1 -disable_ext_panics -no_compat_check"
+        try:
+            logging.info("- Adding T2-specific boot arguments for macOS 15/26")
+            self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -v rddelay=5 amfi=0x80 igfxfw=2 igfxonln=1 -disable_ext_panics -no_compat_check"
+        except Exception as e:
+            logging.error("Adding T2 specific boot arguments failed because of the following error:")
+            logging.exception("Stack Trace:") # This prints the full technical error
+            logging.info("Please try again later.")
+            sys.exit(3)
+            
         # Target the Delete section
         try:
             if "7C436110-AB2A-4BBB-A880-FE41995C9F82" not in self.config["NVRAM"]["Delete"]:
@@ -564,6 +567,15 @@ class BuildMiscellaneous:
             logging.exception("Stack Trace:") # This prints the full technical error
             logging.info("Please try again later.")
             sys.exit(3)
+        try:
+            logging.info("- Set SIP to 0x803")
+            self._set_nvram_value(APPLE_NVRAM_UUID, "csr-active-config", binascii.unhexlify("03080000"), overwrite=True)
+        except Exception as e:
+            logging.error("Setting SIP to 0x803 failed due to the following error:")
+            logging.exception("Stack Trace:") # This prints the full technical error
+            logging.info("Please try again later.")
+            sys.exit(3)
+        
         # After ~20 SEP mailbox timeouts AppleSEPManagerIntel panics.
         # Patch converts the panic call to an early return.
         # 5. SEP Panic Patch Injection
@@ -584,3 +596,4 @@ class BuildMiscellaneous:
             logging.exception("Stack Trace:") # This prints the full technical error
             logging.info("Please try again later.")
             sys.exit(3)
+        
