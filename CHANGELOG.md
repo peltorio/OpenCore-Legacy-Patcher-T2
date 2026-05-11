@@ -1,5 +1,87 @@
 # OpenCore Legacy Patcher T2 changelog / OpenCore Legacy Patcher T2-Änderungslog
-4.0.0 alpha 5 - the emergency update / der Notfallsupdate 🚨 :
+## 4.0.0 alpha 6:
+This release:
+- Adds Ask Gemini button
+- Increases the MainFrame window size
+- On MacBookAir8,1 and MacBookAir8,2, previously, if you install macOS 15 Sequoia, WEG would be disabled. But that's an issue, because the Intel UHD Graphics 617 is not supported by macOS 15 Sequoia, not to mention macOS 26 Tahoe. No other MacBook, iMac or Mac Pro uses Intel UHD Graphics 617. It may require GPU spoofing.
+- Fix where when trying to disable USB-Map.kext or USB-Map-Tahoe.kext on Macs affected by Unsupported Mantissa speed panics, it was looking for a kext that actually in most cases doesn't exist and skips disabling USB port mapping
+- Adds several other T2 patches 
+- Fix a bug where one NVRAM variable could be added twice and fix several vulnerabilities:
+1. Prevention of "String Bloat" (Idempotency)
+In your original code, every time the script ran, it would do this:
+self.config["..."]["boot-args"] += " -v"
+If you ran the builder five times, your config would end up with -v -v -v -v -v.
+
+The Fix: The new _update_nvram_string method checks if value not in current_value. It only adds the argument if it’s missing, keeping the NVRAM clean and preventing the boot-args string from exceeding its character limit.
+
+2. Elimination of KeyError Crashes
+The original code assumed that the dictionary keys for NVRAM and Apple's UUID always existed. If a user had a stripped-down or non-standard config.plist, the script would crash with a KeyError.
+
+The Fix: I added logic to check if the UUID and Key exist:
+
+Python
+if uuid not in self.config["NVRAM"]["Add"]:
+    self.config["NVRAM"]["Add"][uuid] = {}
+This ensures the script creates the necessary "folders" in the data structure instead of crashing because they aren't there.
+
+3. Proper Spacing Logic
+The original code simply added a space at the start of the string (+= " -v"). If the boot-args key was empty, you’d end up with " -v" (a leading space), which can sometimes cause parsing issues in bootloaders.
+
+The Fix: The helper method uses .strip() and .rstrip() to ensure that arguments are separated by exactly one space, with no leading or trailing whitespace.
+
+4. Overwrite Protection
+For sensitive values like csr-active-config (SIP), the original code would blindly overwrite whatever was there.
+
+The Fix: The _set_nvram_value method allows for an overwrite=False flag. While I kept it as True for SIP (since the patcher must control that value), the structure is now there to prevent accidental overwrites of other variables.
+
+5. Code Readability and Maintenance
+By moving the NVRAM logic into helper functions, the "Business Logic" of the _build method is much easier to read. This reduces the "Human Error" vulnerability where a developer might copy-paste a line but forget to change the UUID or the key name.
+
+Diese Version:
+
+- Fügt die Schaltfläche „Gemini fragen“ hinzu
+
+- Vergrößert das MainFrame-Fenster
+
+- Auf MacBookAir8,1 und MacBookAir8,2 wurde WEG bei der Installation von macOS 15 Sequoia deaktiviert. Dies ist jedoch problematisch, da die Intel UHD Graphics 617 weder von macOS 15 Sequoia noch von macOS 26 Tahoe unterstützt wird. Kein anderes MacBook, iMac oder Mac Pro verwendet die Intel UHD Graphics 617. Unter Umständen ist GPU-Spoofing erforderlich.
+
+- Behebt einen Fehler, bei dem beim Deaktivieren von USB-Map.kext oder USB-Map-Tahoe.kext auf Macs, die von Geschwindigkeitsabstürzen aufgrund nicht unterstützter Mantissa-Dateien betroffen sind, nach einer Kext-Datei gesucht wurde, die in den meisten Fällen nicht existierte, und die Deaktivierung der USB-Portzuordnung übersprungen wurde.
+
+- Fügt mehrere weitere T2-Patches hinzu.
+
+- Behebt einen Fehler, durch den eine NVRAM-Variable doppelt hinzugefügt werden konnte, und behebt mehrere Sicherheitslücken:
+1. Verhinderung von String-Aufblähung (Idempotenz):
+Im ursprünglichen Code führte das Skript bei jeder Ausführung Folgendes aus:
+self.config["..."]["boot-args"] += " -v"
+Wenn der Builder fünfmal ausgeführt wurde, enthielt die Konfiguration am Ende die Werte -v -v -v -v -v.
+
+Die Lösung: Die neue Methode _update_nvram_string prüft, ob der Wert nicht in current_value enthalten ist. Sie fügt das Argument nur hinzu, wenn es fehlt. Dadurch bleibt der NVRAM sauber und die Zeichenbegrenzung der Boot-Argumente wird nicht überschritten.
+
+2. Beseitigung von KeyError-Abstürzen
+Der ursprüngliche Code ging davon aus, dass die Wörterbuchschlüssel für NVRAM und Apples UUID immer vorhanden sind. Bei einer reduzierten oder nicht standardmäßigen config.plist führte dies zu einem KeyError-Absturz.
+
+Die Lösung: Ich habe eine Logik hinzugefügt, die prüft, ob UUID und Schlüssel vorhanden sind:
+
+Python:
+if uuid not in self.config["NVRAM"]["Add"]:
+
+self.config["NVRAM"]["Add"][uuid] = {}
+Dadurch wird sichergestellt, dass das Skript die benötigten Ordner in der Datenstruktur erstellt, anstatt abzustürzen, weil sie fehlen.
+
+3. Korrekte Leerzeichenlogik
+Der ursprüngliche Code fügte einfach ein Leerzeichen am Anfang der Zeichenkette hinzu (+= " -v"). Wenn der Schlüssel "boot-args" leer war, führte dies zu einem führenden Leerzeichen " -v", was manchmal zu Parsing-Problemen in Bootloadern führen kann.
+
+Die Lösung: Die Hilfsmethode verwendet `.strip()` und `.rstrip()`, um sicherzustellen, dass Argumente durch genau ein Leerzeichen getrennt sind und keine führenden oder nachfolgenden Leerzeichen enthalten.
+
+4. Schutz vor Überschreiben
+Bei sensiblen Werten wie `csr-active-config` (SIP) überschrieb der ursprüngliche Code die vorhandenen Werte.
+
+Die Lösung: Die Methode `_set_nvram_value` ermöglicht die Option `overwrite=False`. Obwohl ich sie für SIP auf `True` gesetzt habe (da der Patcher diesen Wert kontrollieren muss), verhindert die Struktur nun versehentliches Überschreiben anderer Variablen.
+
+5. Lesbarkeit und Wartbarkeit des Codes
+Durch die Auslagerung der NVRAM-Logik in Hilfsfunktionen ist die Geschäftslogik der Methode `_build` deutlich lesbarer. Dies reduziert die Anfälligkeit für menschliche Fehler, die entstehen können, wenn ein Entwickler eine Zeile kopiert und einfügt, aber vergisst, die UUID oder den Schlüsselnamen zu ändern.
+
+## 4.0.0 alpha 5 - the emergency update / der Notfallsupdate 🚨 :
 This release:
 - Fixes a bug where settings couldn't be saved 
 - and the following vulnerabilities:
