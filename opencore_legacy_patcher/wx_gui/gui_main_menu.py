@@ -112,11 +112,6 @@ class MainFrame(wx.Frame):
                 ],
                 "icon": str(self.constants.icns_resource_path / "OC-Installer.icns"),
             },
-            "⚙️ Settings": {
-                "function": self.on_settings,
-                "description": [
-                ],
-            },
             "Post-Install Root Patch": {
                 "function": self.on_post_install_root_patch,
                 "description": [
@@ -135,13 +130,6 @@ class MainFrame(wx.Frame):
                 ],
                 "icon": str(self.constants.icns_resource_path / "OC-Support.icns"),
             },
-            "✨ Ask Gemini": {
-                "function": self.on_gemini_help,
-                "description": [
-                    "AI Troubleshooting and",
-                    "Installation help.",
-                ],
-            },
         }
         button_x = 30
         button_y = model_label.GetPosition()[1] + 30
@@ -150,6 +138,25 @@ class MainFrame(wx.Frame):
             rollover = int(rollover) + 1
         index = 0
         max_height = 0
+        # Create a dedicated horizontal sizer or just manually center them
+# Settings Button
+settings_btn = wx.Button(self, label="⚙️ Settings", pos=(200, max_height + 20), size=(120, 30))
+settings_btn.Bind(wx.EVT_BUTTON, self.on_settings)
+
+# Gemini Button
+gemini_btn = wx.Button(self, label="✨ Ask Gemini", pos=(330, max_height + 20), size=(150, 30))
+gemini_btn.Bind(wx.EVT_BUTTON, self.on_gemini_help)
+
+# Center them as a pair
+total_width = 120 + 10 + 150 # button1 + gap + button2
+start_x = (self.GetSize().width - total_width) // 2
+
+settings_btn.SetPosition((start_x, max_height + 20))
+gemini_btn.SetPosition((start_x + 130, max_height + 20))
+
+# Description for Gemini (Centered under the Gemini button)
+gemini_desc = wx.StaticText(self, label="AI Troubleshooting and\nInstallation help.", pos=(start_x + 130, max_height + 55))
+gemini_desc.SetFont(gui_support.font_factory(10, wx.FONTWEIGHT_NORMAL))
         for button_name, button_function in menu_buttons.items():
             # place icon
             if "icon" in button_function:
