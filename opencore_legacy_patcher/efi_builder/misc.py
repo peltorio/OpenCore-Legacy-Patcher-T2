@@ -440,26 +440,12 @@ class BuildMiscellaneous:
         if self.model not in ["MacBookAir8,1", "MacBookAir8,2", "MacBookAir9,1", "Macmini8,1", "iMacPro1,1", "MacBookPro15,2", "MacBookPro15,1", "MacBookPro15,3", "MacBookPro15,4", "MacBookPro16,3"]:
             return
 
-        # Check for MacBookAir8,1 and 8,2
-        if self.model in ["MacBookAir8,1", "MacBookAir8,2"]:
-            target_os = self.constants.detected_os  # Default detection
-
-            if target_os == 15: 
-                logging.info(f"- Model {self.model} on OS {target_os}: Disabling WhateverGreen")
-                support.BuildSupport(self.model, self.constants, self.config).get_kext_by_bundle_path("WhateverGreen.kext")["Enabled"] = False
-            else:
-                logging.info(f"- Model {self.model} on OS {target_os}: Enabling WhateverGreen")
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext(
-                    "WhateverGreen.kext", self.constants.whatevergreen_version, self.constants.whatevergreen_path
-                )
-        else:
-            # Standard T2 behavior
-            logging.info("- Enabling WhateverGreen for T2 Mac iGPU rendering")
-            
-            if support.BuildSupport(self.model, self.constants, self.config).get_kext_by_bundle_path("WhateverGreen.kext").get("Enabled") is not True:
-                support.BuildSupport(self.model, self.constants, self.config).enable_kext(
-                    "WhateverGreen.kext", self.constants.whatevergreen_version, self.constants.whatevergreen_path
-                )
+        logging.info("- Enabling WhateverGreen")
+        
+        if support.BuildSupport(self.model, self.constants, self.config).get_kext_by_bundle_path("WhateverGreen.kext").get("Enabled") is not True:
+            support.BuildSupport(self.model, self.constants, self.config).enable_kext(
+                "WhateverGreen.kext", self.constants.whatevergreen_version, self.constants.whatevergreen_path
+            )
         try:
             logging.info("Enabling CryptexFixup.kext")
             support.BuildSupport(self.model, self.constants, self.config).enable_kext("CryptexFixup.kext", "1.0.5", self.constants.kexts_path)
@@ -510,24 +496,26 @@ class BuildMiscellaneous:
         # Sequoia installer checks hardware compatibility and refuses to proceed
         # silently (gray screen hang) on unsupported T2 Macs. This bypasses it.
         logging.info("- Adding -no_compat_check for T2 Macs running unsupported macOS versions")
-        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -no_compat_check"
+        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " "
 
         # T2 Support: Enable disk access (AMFI bypass), graphics fixes, and boot delay
         logging.info("- Adding T2-specific boot arguments for macOS 15/26")
-        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -v rddelay=5 amfi=0x80 igfxfw=2 igfxonln=1 revpatch=sbvmm"
-        logging.info("-Adding vmmroot=1 arguments")
-        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " vmmroot=1"
-        logging.info("-Set NVRAM variable to -disable_ext_panics")
-        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -disable_ext_panics"
-        logging.info("-Add some NVRAM variables to the delete section")
+        self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] += " -v rddelay=5 amfi=0x80 igfxfw=2 igfxonln=1 revpatch=sbvmm vmmroot=1 -disable_ext_panics -no_compat_check"
         # Target the Delete section
-        if "7C436110-AB2A-4BBB-A880-FE41995C9F82" not in self.config["NVRAM"]["Delete"]:
-            self.config["NVRAM"]["Delete"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"] = []
-        
-        # Add variables to the list so they get cleared on boot
-        delete_node = self.config["NVRAM"]["Delete"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]
-        if "boot-args" not in delete_node:
-            delete_node.append("boot-args")
+        try:
+            if "7C436110-AB2A-4BBB-A880-FE41995C9F82" not in self.config["NVRAM"]["Delete"]:
+                logging.info("-Add 7C436110-AB2A-4BBB-A880-FE41995C9F82 to the delete section in OpenCore")
+                self.config["NVRAM"]["Delete"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"] = []
+            
+            # Add variables to the list so they get cleared on boot
+            delete_node = self.config["NVRAM"]["Delete"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]
+            if "boot-args" not in delete_node:
+                delete_node.append("boot-args")
+        except Exception as e:
+            logging.error("Adding the following NVRAM variable 7C436110-AB2A-4BBB-A880-FE41995C9F82 failed to be added to the delete section due to the following error:")
+            logging.exception("Stack Trace:") # This prints the full technical error
+            logging.info("Please try again later.")
+            sys.exit(3)
 
         # This is the 'Magic' that makes grep VMM return something
         logging.info("-Add Cpuid1Data and Cpuid1Mask NVRAM variables")
@@ -535,91 +523,21 @@ class BuildMiscellaneous:
         self.config["Kernel"]["Emulate"]["Cpuid1Mask"] = binascii.unhexlify("00000000000000000000000000000080")
         # After ~20 SEP mailbox timeouts AppleSEPManagerIntel panics.
         # Patch converts the panic call to an early return.
-        logging.info("- Enabling AppleSEPManager SEP timeout panic patch for T2 Macs")
-        
-        kernel_patches = self.config.get("Kernel", {}).get("Patch", [])
-        
-        # We search using the correct identifier key `"Identifier"` and the expected name `"com.apple.driver.AppleSEPManager"`
-        sep_patch = support.BuildSupport(self.model, self.constants, self.config).get_item_by_kv(
-            kernel_patches,
-            "Identifier",
-            "com.apple.driver.AppleSEPManager"
-        )
-
-        success_flag = False
-
-        if sep_patch:
-            sep_patch["Enabled"] = True
-            success_flag = True
-        else:
-            logging.info("- Patch not found in template; injecting manually...")
+        # 5. SEP Panic Patch Injection
+        try:
+            logging.info("- Enabling AppleSEPManager timeout panic patch for T2 Macs")
             new_patch = {
                 "Arch": "x86_64",
-                "Base": "",
-                "Comment": "Prevent AppleSEPManager SEP timeout panic on T2 Macs",
-                "Count": 0,
+                "Comment": "Prevent AppleSEPManager SEP timeout panic",
                 "Enabled": True,
-                "Find": b"\x48\x83\xBF\xB0\x03\x00\x00\x00\x75\x4F",
                 "Identifier": "com.apple.driver.AppleSEPManager",
-                "Limit": 0,
-                "Mask": b"",
-                "MaxKernel": "",
-                "MinKernel": "24.6.0",
+                "Find": b"\x48\x83\xBF\xB0\x03\x00\x00\x00\x75\x4F",
                 "Replace": b"\x48\x83\xBF\xB0\x03\x00\x00\x00\xEB\x4F",
-                "ReplaceMask": b"",
-                "Skip": 0
+                "MinKernel": "24.0.0"
             }
-            if "Kernel" not in self.config:
-                self.config["Kernel"] = {"Patch": []}
-            if "Patch" not in self.config["Kernel"]:
-                self.config["Kernel"]["Patch"] = []
-                
             self.config["Kernel"]["Patch"].append(new_patch)
-            
-            # Verify if the new patch was properly created and stored
-            verification_patch = support.BuildSupport(self.model, self.constants, self.config).get_item_by_kv(
-                self.config["Kernel"]["Patch"],
-                "Identifier",
-                "com.apple.driver.AppleSEPManager"
-            )
-            
-            if verification_patch:
-                success_flag = True
-
-        if not success_flag:
-            logging.error("CRITICAL: Failed to enable or inject necessary Apple Secure Enclave Processor patches. Exiting...")
+        except Exception as e:
+            logging.error("Enabling AppleSEPManager timeout panic patch for T2 Macs failed due to the following error:")
+            logging.exception("Stack Trace:") # This prints the full technical error
+            logging.info("Please try again later.")
             sys.exit(3)
-
-
-# Path to your OpenCore config.plist
-PLIST_PATH = "config.plist"
-UUID = "7C436110-AB2A-4BBB-A880-FE41995C9F82"
-
-# Variables we want to ensure are deleted/overwritten
-VARS_TO_DELETE = ["boot-args", "csr-active-config"]
-
-def patch_nvram_delete(path):
-    with open(path, 'rb') as f:
-        config = plistlib.load(f)
-
-    # 1. Navigate to NVRAM > Delete
-    nvram_delete = config.setdefault("NVRAM", {}).setdefault("Delete", {})
-
-    # 2. Check if our T2 UUID exists, if not, create it as an empty list
-    if UUID not in nvram_delete:
-        nvram_delete[UUID] = []
-    
-    # 3. Add the specific variables to the list if they aren't already there
-    for var in VARS_TO_DELETE:
-        if var not in nvram_delete[UUID]:
-            nvram_delete[UUID].append(var)
-            print(f"Added {var} to Delete section for {UUID}")
-
-    # 4. Save the modified plist back to disk
-    with open(path, 'wb') as f:
-        plistlib.dump(config, f)
-    
-    print("Successfully updated NVRAM > Delete.")
-
-if __name__ == "__main__":
-    patch_nvram_delete(PLIST_PATH)
