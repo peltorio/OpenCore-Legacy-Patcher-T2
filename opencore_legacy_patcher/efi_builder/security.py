@@ -83,12 +83,8 @@ class BuildSecurity:
                 self._set_nvram_value(APPLE_NVRAM_UUID, "csr-active-config", sip_hex, overwrite=True)
             
             elif self.constants.sip_status is False:
-                if "T2_CHIP" in self.constants.device_properties.get(self.model, {}).get("Features", []):
-                    logging.info("- T2 Mac Detected: disabling SIP completely")
-                    self._set_nvram_value(APPLE_NVRAM_UUID, "csr-active-config", binascii.unhexlify("EF0F0000"), overwrite=True)
-                else:
-                    logging.info("- Set SIP to allow Root Volume patching on non-T2 Macs")
-                    self._set_nvram_value(APPLE_NVRAM_UUID, "csr-active-config", binascii.unhexlify("03080000"), overwrite=True)
+                logging.info("- Set SIP to allow Root Volume patching")
+                self._set_nvram_value(APPLE_NVRAM_UUID, "csr-active-config", binascii.unhexlify("03080000"), overwrite=True)
 
             # apfs.kext FileVault patch
             logging.info("- Allowing FileVault on Root Patched systems")
