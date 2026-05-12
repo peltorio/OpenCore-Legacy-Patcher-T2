@@ -160,30 +160,34 @@ class MainFrame(wx.Frame):
 
     def _preflight_checks(self):
         try:
-            # Clean the strings to ensure no hidden spaces/newlines cause a mismatch
+            # Clean strings and diagnostic print
             real_model = str(self.constants.computer.real_model).strip()
             build_model = str(self.constants.computer.build_model).strip() if self.constants.computer.build_model else None
             
             print(f"DEBUG: Real: '{real_model}' | Build: '{build_model}'")
-            
+
             if (
-             self.constants.computer.build_model != None and
-             self.constants.computer.build_model != self.constants.computer.real_model and
-             self.constants.host_is_hackintosh is False
-             ):
-             pop_up = wx.MessageDialog(
-                 self,
-                 f"Unsupported Configuration Detected!\nHost: {real_model}\nBuild: {build_model}",
-                 "Mismatch Detected",
-                 style=wx.OK | wx.ICON_EXCLAMATION
-              )
-              pop_up.ShowModal()
-              self.on_build_and_install()
-              return
-                
+                build_model is not None and
+                build_model != real_model and
+                self.constants.computer.build_model != self.constants.computer.real_model and
+                self.constants.host_is_hackintosh is False
+            ):
+                # This block is skipped for native Macs
+                pop_up = wx.MessageDialog(
+                    self,
+                    f"We found you are currently booting OpenCore built for a different unit: {build_model}\n\nPlease Build and Install a new OpenCore config.",
+                    "Unsupported Configuration Detected!",
+                    style=wx.OK | wx.ICON_EXCLAMATION
+                )
+                pop_up.ShowModal()
+                self.on_build_and_install()
+                return
+
         except Exception as e:
             print(f"DEBUG: Preflight error: {e}")
 
+        # The update check remains outside the if-statement
+        threading.Thread(target=self._check_for_updates).start()
 
         if "--update_installed" in sys.argv and self.constants.has_checked_updates is False and gui_support.CheckProperties(self.constants).host_can_build():
             # Notify user that the update has been installed
