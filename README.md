@@ -1,4 +1,4 @@
-<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/d3a309fe-d49f-4c96-adcf-545624d0721c" /><div align="center">
+<img src="https://github.com/dortania/OpenCore-Legacy-Patcher/blob/macos-next/docs/images/OC-Patcher.png" alt="OpenCore Patcher Logo" width="256" />
              <h1>OpenCore Legacy Patcher for T2 Macs Alpha</h1>
 </div>
 
