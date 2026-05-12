@@ -102,7 +102,6 @@ SupportedSMBIOS = [
     "MacPro3,1",
     "MacPro4,1",
     "MacPro5,1",
-    "MacPro6,1"
     # "MacPro7,1"
     # Xserve
     "Xserve2,1",
