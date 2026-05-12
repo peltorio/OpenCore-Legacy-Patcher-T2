@@ -1,5 +1,5 @@
 """
-device_probe.py: Hardware probing with T2 Native Support Fix
+device_probe.py: Hardware probing with Native T2 Support Fix
 """
 
 import enum
@@ -805,44 +805,50 @@ class Computer:
             ioreg.IOObjectRelease(device)
 
     def smbios_probe(self):
-        # Reported model
+        # Reported model extraction
         entry = next(ioreg.ioiterator_to_list(ioreg.IOServiceGetMatchingServices(ioreg.kIOMasterPortDefault, ioreg.IOServiceMatching("IOPlatformExpertDevice".encode()), None)[1]))
-        self.reported_model = ioreg.corefoundation_to_native(ioreg.IORegistryEntryCreateCFProperty(entry, "model", ioreg.kCFAllocatorDefault, ioreg.kNilOptions)).strip(b"\0").decode()
-        translated = subprocess.run(["/usr/sbin/sysctl", "-in", "sysctl.proc_translated"], stdout=subprocess.PIPE).stdout.decode()
-        if translated:
-            board = "target-type"
-        else:
-            board = "board-id"
-        self.reported_board_id = ioreg.corefoundation_to_native(ioreg.IORegistryEntryCreateCFProperty(entry, board, ioreg.kCFAllocatorDefault, ioreg.kNilOptions)).strip(b"\0").decode()
+        raw_model = ioreg.corefoundation_to_native(ioreg.IORegistryEntryCreateCFProperty(entry, "model", ioreg.kCFAllocatorDefault, ioreg.kNilOptions))
+        self.reported_model = raw_model.strip(b"\0").decode() if isinstance(raw_model, bytes) else raw_model
+
+        # FIX: Explicit Rosetta check to avoid Truthy/Falsy string issues on Intel
+        proc_check = subprocess.run(["/usr/sbin/sysctl", "-in", "sysctl.proc_translated"], stdout=subprocess.PIPE).stdout.decode().strip()
         
-        # UUID Handling with SHA-256 for better security
+        # We only use 'target-type' on Apple Silicon under translation; Intel always uses 'board-id'
+        board_key = "target-type" if proc_check == "1" else "board-id"
+        
+        raw_board = ioreg.corefoundation_to_native(ioreg.IORegistryEntryCreateCFProperty(entry, board_key, ioreg.kCFAllocatorDefault, ioreg.kNilOptions))
+        if isinstance(raw_board, bytes):
+            self.reported_board_id = raw_board.strip(b"\0").decode()
+        else:
+            self.reported_board_id = raw_board
+        
+        # UUID Handling (Updated to SHA-256 for better collision resistance)
         uuid_raw = ioreg.corefoundation_to_native(ioreg.IORegistryEntryCreateCFProperty(entry, "IOPlatformUUID", ioreg.kCFAllocatorDefault, ioreg.kNilOptions))
-        self.uuid_sha1 = hashlib.sha256(uuid_raw.encode()).hexdigest()
+        self.uuid_sha1 = hashlib.sha256(uuid_raw.encode()).hexdigest() if uuid_raw else None
+        
         ioreg.IOObjectRelease(entry)
 
-        # FIX: Check if natively supported hardware is being obscured by OCLP's spoofing variables
+        # FIX: Protect Native T2 Models from OCLP "Unsupported" logic drift
+        native_tahoe_intel_models = ["MacBookPro16,1", "MacBookPro16,2", "MacBookPro16,4", "Macmini8,1", "iMac20,1", "iMac20,2"]
+        
         oem_product = utilities.get_nvram("oem-product", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True)
         
-        # If the hardware is natively supported (e.g. MBP16,2), prioritize the real reported ID over a spoofed NVRAM variable
-        native_t2_intel_macs = ["MacBookPro16,1", "MacBookPro16,2", "MacBookPro16,4", "Macmini8,1", "iMac20,1", "iMac20,2"]
-        if self.reported_model in native_t2_intel_macs:
+        # If hardware is native, prioritize reported ID over spoofed NVRAM variables
+        if self.reported_model in native_tahoe_intel_models:
             self.real_model = self.reported_model
+            self.real_board_id = self.reported_board_id
         else:
             self.real_model = oem_product or self.reported_model
-            
-        self.real_board_id = utilities.get_nvram("oem-board", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True) or self.reported_board_id
-        self.build_model = utilities.get_nvram("OCLP-Model", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True)
+            self.real_board_id = utilities.get_nvram("oem-board", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True) or self.reported_board_id
 
-        # OCLP version
+        self.build_model = utilities.get_nvram("OCLP-Model", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True)
         self.oclp_version = utilities.get_nvram("OCLP-Version", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True)
         self.opencore_version = utilities.get_nvram("opencore-version", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True)
         self.opencore_path = utilities.get_nvram("boot-path", "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102", decode=True)
 
-        # SecureBoot Variables
         self.secure_boot_model = utilities.check_secure_boot_model()
         self.secure_boot_policy = utilities.check_ap_security_policy()
 
-        # Firmware Vendor
         firmware_vendor = utilities.get_firmware_vendor(decode=False)
         if isinstance(firmware_vendor, bytes):
             firmware_vendor = str(firmware_vendor.replace(b"\x00", b"").decode("utf-8"))
@@ -943,5 +949,6 @@ class Computer:
                 self.oclp_sys_signed = sys_plist["Custom Signature"]
 
     def check_rosetta(self):
-        result = subprocess.run(["/usr/sbin/sysctl", "-in", "sysctl.proc_translated"], stdout=subprocess.PIPE).stdout.decode()
-        self.rosetta_active = "1" in result
+        # FIX: Ensure we strip whitespace to avoid truthy empty strings
+        result = subprocess.run(["/usr/sbin/sysctl", "-in", "sysctl.proc_translated"], stdout=subprocess.PIPE).stdout.decode().strip()
+        self.rosetta_active = result == "1"
