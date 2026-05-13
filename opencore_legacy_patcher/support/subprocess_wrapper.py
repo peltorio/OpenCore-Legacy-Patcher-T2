@@ -12,14 +12,28 @@ def run(*args, **kwargs) -> subprocess.CompletedProcess:
 
 def run_as_root(*args, **kwargs) -> subprocess.CompletedProcess:
     """
-    Run subprocess as root using sudo instead of helper tool.
+    Run subprocess as root using macOS native GUI authentication.
     """
     if not args or not args[0]:
         raise ValueError("No command provided")
     
-    # args[0] is a list like ['/usr/sbin/diskutil', 'mount', ...]
-    command = ["sudo"] + list(args[0])
-    return subprocess.run(command, **kwargs)
+    # Standardize args[0] as a list for processing
+    original_command = list(args[0])
+    
+    # Convert the command list into a single escaped string for AppleScript
+    # We use shlex.join to handle spaces and special characters safely
+    import shlex
+    cmd_string = shlex.join(original_command)
+    
+    # Construct the AppleScript command
+    # 'with administrator privileges' triggers the native macOS password prompt
+    as_script = f'do shell script "{cmd_string}" with administrator privileges'
+    
+    # We call osascript to execute the AppleScript logic
+    # Note: We remove 'sudo' from the command list because AppleScript handles elevation
+    gui_command = ["osascript", "-e", as_script]
+    
+    return subprocess.run(gui_command, **kwargs)
 
 def verify(process_result: subprocess.CompletedProcess) -> None:
     """
