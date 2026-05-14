@@ -113,12 +113,12 @@ class BuildOpenCore:
                 current_args = self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"].get("boot-args", "")
                 self.config["NVRAM"]["Add"]["7C436110-AB2A-4BBB-A880-FE41995C9F82"]["boot-args"] = current_args + t2_args
 
-                 # Force CPUID hypervisor bit for T2 root patch VM spoofing
-                 # Except for Macmini8,1 which experiences GPU issues with CPUID masking
-                 if self.model != "Macmini8,1":
-                     self.constants.set_vmm_cpuid = True
-                 self.constants.force_vmm = True
-                 self.constants.apfs_trim_timeout = False
+                # Force CPUID hypervisor bit for T2 root patch VM spoofing
+                # Except for Macmini8,1 which experiences GPU issues with CPUID masking
+                if self.model != "Macmini8,1":
+                    self.constants.set_vmm_cpuid = True
+                self.constants.force_vmm = True
+                self.constants.apfs_trim_timeout = False
                 if "UEFI" not in self.config:
                     self.config["UEFI"] = {}
                 if "Quirks" not in self.config["UEFI"]:
