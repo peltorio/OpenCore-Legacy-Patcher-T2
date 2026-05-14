@@ -636,6 +636,47 @@ class BuildMiscellaneous:
             logging.exception("Stack Trace:") # This prints the full technical error
             logging.info("Please try again later.")
             sys.exit(3)
+        try:
+            logging.info("- Add Bypass XHCI Interrupt Filter")
+            # Bypass XHCI Interrupt Filter
+            xhci_filter_patch = {
+                "Arch": "x86_64",
+                "Comment": "Bypass XHCI Interrupt Filter",
+                "Enabled": True,
+                "Identifier": "com.apple.driver.appleusbxhci",
+                # Find: 48 89 45 B0 44 89 45 B8 (Standard event storage)
+                "Find": b"\x48\x89\x45\xB0\x44\x89\x45\xB8",
+                # Replace: C6 45 B0 01 90 90 90 90 (Force event 'True' status)
+                "Replace": b"\xC6\x45\xB0\x01\x90\x90\x90\x90",
+                "MinKernel": "25.4.0"
+            }
+            self.config["Kernel"]["Patch"].append(xhci_filter_patch)
+        except Exception as e:
+            logging.error("Adding bypass for XHCI Interrupt Filter failed due to the following error:")
+            logging.exception("Stack Trace:") # This prints the full technical error
+            logging.info("Please try again later.")
+            sys.exit(3)
+
+        try:
+            logging.info("- Add AppleIntelUSBXHC Skip Command Completion check patches to prevent boot-time hang")
+            xhci_skip_wait = {
+                "Arch": "x86_64",
+                "Comment": "Skip XHCI Command Completion wait (Tahoe 26.4.1)",
+                "Enabled": True,
+                "Identifier": "com.apple.driver.appleusbxhci",
+                # Find: 0F 84 8A 00 00 00 44 89 (Check for event bit)
+                "Find": b"\x0F\x84\x8A\x00\x00\x00\x44\x89",
+                # Replace: E9 8B 00 00 00 90 44 89 (Force jump to success branch)
+                "Replace": b"\xE9\x8B\x00\x00\x00\x90\x44\x89",
+                "MinKernel": "25.4.0"
+            }
+            self.config["Kernel"]["Patch"].append(xhci_skip_wait)
+        except Exception as e:
+            logging.error("Adding bypass for AppleIntelUSBXHC Skip Command Completion check failed due to the following error:")
+            logging.exception("Stack Trace:") # This prints the full technical error
+            logging.info("Please try again later.")
+            sys.exit(3)
+
 
         
         # After ~20 SEP mailbox timeouts AppleSEPManagerIntel panics.
