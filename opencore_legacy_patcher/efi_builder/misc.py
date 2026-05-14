@@ -614,7 +614,7 @@ class BuildMiscellaneous:
         
         self.run_sequence()
     
-    def run_sequence():
+    def run_sequence(self):
         # 1. Run misc.py
         print("Starting misc.py...")
         result = subprocess.run([sys.executable, "misc.py"])
