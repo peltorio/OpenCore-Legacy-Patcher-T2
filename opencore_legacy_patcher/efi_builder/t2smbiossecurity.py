@@ -1,41 +1,54 @@
 import os
-import re
+import plistlib
 import logging
 
-# Update this path if you are running it on a USB or different mount point
+# Set up logging for standalone runs
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
 config_path = '/Volumes/EFI/EFI/OC/config.plist'
+try:
+    logging.info("Trying to call the definition finalize_t2_tahoe")
+    finalize_t2_tahoe(path)
+except Exception as e:
+    logging.error(f"Couldn't call the function. Aborting...")
+    sys.exit(3)
 
 def finalize_t2_tahoe(path):
-    logging.info("Adding Booter Quirks patches for T2 Macs")
+    logging.info("Applying T2 Tahoe Booter and Security patches...")
+    
     if not os.path.exists(path):
-        print(f"Error: {path} not found. Ensure EFI is mounted.")
+        logging.error(f"File not found: {path}. Ensure your EFI partition is mounted.")
         return
-    
-    with open(path, 'r') as f:
-        content = f.read()
-    
-    # 2. Booter Quirks (Crucial for T2 Memory Protection)
-    replacements = {
-        '<key>RebuildAppleMemoryMap</key>\n\t\t\t<false/>': '<key>RebuildAppleMemoryMap</key>\n\t\t\t<true/>',
-        '<key>EnableWriteUnprotector</key>\n\t\t\t<true/>': '<key>EnableWriteUnprotector</key>\n\t\t\t<false/>',
-        '<key>SyncRuntimePermissions</key>\n\t\t\t<false/>': '<key>SyncRuntimePermissions</key>\n\t\t\t<true/>', # Added for Tahoe stability
-        '<key>DevirtualiseMmio</key>\n\t\t\t<false/>': '<key>DevirtualiseMmio</key>\n\t\t\t<true/>'          # Added to help EXITBS:START
-    }
 
-    for old, new in replacements.items():
-        content = content.replace(old, new)
+    try:
+        with open(path, 'rb') as f:
+            config = plistlib.load(f)
 
-    # 3. Security and SMBIOS
-    content = re.sub(r'(<key>UpdateSMBIOSMode</key>\s*<string>).*?(</string>)', r'\1Custom\2', content)
-    content = re.sub(r'(<key>SecureBootModel</key>\s*<string>).*?(</string>)', r'\1Disabled\2', content)
+        # 1. Booter Quirks (Stability for T2 + macOS 26)
+        booter_quirks = config.get('Booter', {}).get('Quirks', {})
+        booter_quirks.update({
+            'RebuildAppleMemoryMap': True,
+            'EnableWriteUnprotector': False,
+            'SyncRuntimePermissions': True,
+            'DevirtualiseMmio': True
+        })
 
-    with open(path, 'w') as f:
-        f.write(content)
-    
-    print("-" * 30)
-    print("DONE.")
-    print("Action Required: Reset NVRAM before booting!")
-    print("-" * 30)
+        # 2. Kernel/Security Settings
+        # UpdateSMBIOSMode: 'Custom' is required for many T2 patches to stick
+        config.get('PlatformInfo', {})['UpdateSMBIOSMode'] = 'Custom'
+        
+        # SecureBootModel: 'Disabled' is often necessary for macOS 26 Tahoe and macOS 15 Sequoia to work on unsupported Macs
+        config.get('Misc', {}).get('Security', {})['SecureBootModel'] = 'Disabled'
 
-if __name__ == "__main__":
-    finalize_t2_tahoe(config_path)
+        # 3. Save the file back
+        with open(path, 'wb') as f:
+            plist_data = plistlib.dump(config, f, sort_keys=True)
+            
+        print("-" * 30)
+        print("PATCH COMPLETE")
+        print("Status: Booter Quirks and Security levels updated.")
+        print("Action Required: Reset NVRAM to apply changes.")
+        print("-" * 30)
+
+    except Exception as e:
+        logging.error(f"Failed to patch config: {e}")
