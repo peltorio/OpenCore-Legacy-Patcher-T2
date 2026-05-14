@@ -7,14 +7,6 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 config_path = '/Volumes/EFI/EFI/OC/config.plist'
-try:
-    logging.info("Trying to call the definition finalize_t2_tahoe")
-    finalize_t2_tahoe(path)
-except Exception as e:
-    logging.error("We couldn't call finalize_t2_tahoe function due to the following error:")
-    logging.exception("Stack Trace:") # This prints the full technical error
-    logging.info("Please try again later.")
-    sys.exit(3)
 
 def finalize_t2_tahoe(path):
     logging.info("Applying T2 Tahoe Booter and Security patches...")
@@ -55,3 +47,15 @@ def finalize_t2_tahoe(path):
 
     except Exception as e:
         logging.error(f"Failed to patch config: {e}")
+
+if __name__ == "__main__":
+    config_path = '/Volumes/EFI/EFI/OC/config.plist'
+    try:
+        logging.info("Starting T2 Tahoe post-processing...")
+        # Note: We pass config_path here
+        finalize_t2_tahoe(config_path)
+    except Exception as e:
+        logging.error("We couldn't call finalize_t2_tahoe function due to the following error:")
+        logging.exception("Stack Trace:") 
+        logging.info("Aborting...")
+        sys.exit(3)
