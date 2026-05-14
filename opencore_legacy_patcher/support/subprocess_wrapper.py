@@ -23,7 +23,7 @@ def run_as_root(*args, **kwargs) -> subprocess.CompletedProcess:
     # Convert the command list into a single escaped string for AppleScript
     # We use shlex.join to handle spaces and special characters safely
     import shlex
-    cmd_string = shlex.join(original_command)
+    cmd_string = shlex.join(str(arg) for arg in original_command)
     
     # Construct the AppleScript command
     # 'with administrator privileges' triggers the native macOS password prompt
