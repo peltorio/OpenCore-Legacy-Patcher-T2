@@ -612,7 +612,7 @@ class BuildMiscellaneous:
             logging.info("Please try again later.")
             sys.exit(3)
         
-        run_sequence()
+        self.run_sequence()
     
     def run_sequence():
         # 1. Run misc.py
