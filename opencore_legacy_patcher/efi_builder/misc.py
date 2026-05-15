@@ -816,6 +816,32 @@ class BuildMiscellaneous:
             logging.exception("Stack Trace:") # This prints the full technical error
             logging.info("Please try again later.")
             sys.exit(3)
+        try:
+            logging.info("- Injecting Universal XHCI Force Success patch for Tahoe...")
+            
+            # This patch targets the status comparison logic directly.
+            # It changes a '75' (JNZ/Jump if Not Zero) to an 'EB' (JMP/Jump Always),
+            # effectively telling the driver "Everything is fine" regardless of the T2 response.
+            xhci_universal_patch = {
+                "Arch": "x86_64",
+                "Comment": "Force XHCI Success (Tahoe 26.x Universal)",
+                "Enabled": True,
+                "Identifier": "com.apple.driver.appleusbxhci",
+                # Find: 83 FB 05 75 08 (CMP EBX, 5; JNE +8)
+                "Find": b"\x83\xFB\x05\x75\x08",
+                # Replace: 83 FB 05 EB 08 (CMP EBX, 5; JMP +8)
+                "Replace": b"\x83\xFB\x05\xEB\x08",
+                "MinKernel": "25.0.0"
+            }
+            
+            self.config["Kernel"]["Patch"].append(xhci_universal_patch)
+            logging.info("  - Successfully added Universal XHCI Force Success patch.")
+        
+        except Exception as e:
+            logging.error("Failed to inject Universal XHCI patch:")
+            logging.exception("Stack Trace:") # This prints the full technical error
+            logging.info("Please try again later.")
+            sys.exit(3)
         
         # After ~20 SEP mailbox timeouts AppleSEPManagerIntel panics.
         # Patch converts the panic call to an early return.
