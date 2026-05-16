@@ -1,6 +1,22 @@
 # OpenCore Legacy Patcher T2 changelog / OpenCore Legacy Patcher T2-Änderungslog
-## 4.0.0 alpha 14:
+## 4.0.0 alpha 16:
 
+## 4.0.0 alpha 14:
+This release:
+
+fixes a bug where ocvalidate and macserial aren't included in OpenCore-Patcher.pkg
+
+fixes a bug where it fails to compare if the version is newer or older and fail to update
+
+Fix a bug where the shlex.join() function in subprocess_wrapper.py receives a pathlib.PosixPath object instead of a string
+
+Diese Version:
+
+behebt einen Fehler, indem ocvalidate und macserial waren nicht in OpenCore-Patcher.pkg vorhanden
+
+behebt einen Fehler, indem den Patcher schlägt fehl, Updates zu installieren, weil es konnte nicht mit neuere Versionen vergleichen
+
+behebt einen Fehler, bei dem die Funktion shlex.join() in subprocess_wrapper.py ein pathlib.PosixPath-Objekt anstelle eines Strings empfängt.
 
 ## 4.0.0 alpha 11-13:
 Diese Versionen sind nur Sicherheitsupdates und Fehlerehebungen.
