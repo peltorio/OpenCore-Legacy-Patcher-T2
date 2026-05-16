@@ -246,7 +246,22 @@ class BuildSupport:
                 for item in list(self.config[entry][sub_entry]):
                     if item["Enabled"] is False:
                         self.config[entry][sub_entry].remove(item)
-
+                    else:
+                        # NEW: Force schema compliance for OpenCore 1.0.7+
+                        if entry == "Kernel" and sub_entry == "Patch":
+                            patch_defaults = {
+                                "Arch": "x86_64",
+                                "Base": "",
+                                "Count": 0,
+                                "Limit": 0,
+                                "Mask": b"",
+                                "MaxKernel": "",
+                                "ReplaceMask": b"",
+                                "Skip": 0
+                            }
+                            for key, value in patch_defaults.items():
+                                if key not in item:
+                                    item[key] = value
         for kext in self.constants.kexts_path.rglob("*.zip"):
             with zipfile.ZipFile(kext) as zip_file:
                 zip_file.extractall(self.constants.kexts_path)
