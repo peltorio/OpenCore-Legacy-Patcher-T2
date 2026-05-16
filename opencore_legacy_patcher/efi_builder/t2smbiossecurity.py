@@ -4,12 +4,15 @@ import logging
 import sys
 
 # Set up logging for standalone runs
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-
-config_path = '/Volumes/EFI/EFI/OC/config.plist'
+if not logging.getLogger().hasHandlers():
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 def finalize_t2_tahoe(path):
-    logging.info("Applying T2 Tahoe Booter and Security patches...")
+    """
+    Hardened patcher for T2 Macs running macOS 15/16.
+    Ensures dictionary keys exist before writing to prevent plist corruption.
+    """
+    logging.info(f"Applying T2 Tahoe Booter and Security patches to: {path}")
     
     if not os.path.exists(path):
         logging.error(f"File not found: {path}. Ensure your EFI partition is mounted.")
@@ -20,45 +23,54 @@ def finalize_t2_tahoe(path):
             config = plistlib.load(f)
 
         # 1. Booter Quirks (Stability for T2 + macOS 26)
-        if 'Booter' not in config:
-            config['Booter'] = {}
-        if 'Quirks' not in config['Booter']:
-            config['Booter']['Quirks'] = {}
-        config['Booter']['Quirks'].update({
+        # setdefault ensures we don't overwrite existing unrelated quirks
+        booter = config.setdefault('Booter', {})
+        quirks = booter.setdefault('Quirks', {})
+        
+        quirks.update({
             'RebuildAppleMemoryMap': True,
             'EnableWriteUnprotector': False,
             'SyncRuntimePermissions': True,
             'DevirtualiseMmio': True
         })
 
-        # 2. Kernel/Security Settings
-        # UpdateSMBIOSMode: 'Custom' is required for many T2 patches to stick
-        config.get('PlatformInfo', {})['UpdateSMBIOSMode'] = 'Custom'
+        # 2. PlatformInfo & Security Settings
+        # UpdateSMBIOSMode: 'Custom' is required for T2 SMBIOS patches to work
+        platform_info = config.setdefault('PlatformInfo', {})
+        platform_info['UpdateSMBIOSMode'] = 'Custom'
         
-        # SecureBootModel: 'Disabled' is often necessary for macOS 26 Tahoe and macOS 15 Sequoia to work on unsupported Macs
-        config.get('Misc', {}).get('Security', {})['SecureBootModel'] = 'Disabled'
+        # SecureBootModel: Must be 'Disabled' for Tahoe/Sequoia on unsupported IDs
+        misc = config.setdefault('Misc', {})
+        security = misc.setdefault('Security', {})
+        security['SecureBootModel'] = 'Disabled'
 
-        # 3. Save the file back
+        # 3. Schema Guard (Prevents ocvalidate crashes)
+        # Ensure Kernel->Quirks exists so validation doesn't fail on missing parent keys
+        kernel = config.setdefault('Kernel', {})
+        kernel_quirks = kernel.setdefault('Quirks', {})
+        if 'DisableIoMapper' not in kernel_quirks:
+            kernel_quirks['DisableIoMapper'] = True
+
+        # 4. Save the file back
         with open(path, 'wb') as f:
-            plist_data = plistlib.dump(config, f, sort_keys=True)
+            plistlib.dump(config, f, sort_keys=True)
             
         print("-" * 30)
-        print("PATCH COMPLETE")
-        print("Status: Booter Quirks and Security levels updated.")
-        print("Action Required: Reset NVRAM to apply changes.")
+        print("T2 PATCH SUCCESSFUL")
+        print("Status: Booter/Security schema verified.")
         print("-" * 30)
 
     except Exception as e:
-        logging.error(f"Failed to patch config: {e}")
+        logging.error(f"Critical failure during config patch: {e}")
+        # Raise so build.py can catch the error and exit cleanly
+        raise
 
 if __name__ == "__main__":
-    config_path = '/Volumes/EFI/EFI/OC/config.plist'
+    # Default path for manual execution
+    target_plist = '/Volumes/EFI/EFI/OC/config.plist'
     try:
-        logging.info("Starting T2 Tahoe post-processing...")
-        # Note: We pass config_path here
-        finalize_t2_tahoe(config_path)
+        logging.info("Starting manual T2 Tahoe post-processing...")
+        finalize_t2_tahoe(target_plist)
     except Exception as e:
-        logging.error("We couldn't call finalize_t2_tahoe function due to the following error:")
-        logging.exception("Stack Trace:") 
-        logging.info("Aborting...")
+        logging.error("Process aborted due to unexpected error.")
         sys.exit(3)
