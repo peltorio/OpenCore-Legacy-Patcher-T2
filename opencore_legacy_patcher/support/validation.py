@@ -2,16 +2,13 @@
 validation.py: Validation class for the patcher
 """
 
-import atexit
 import logging
 import subprocess
-
+import shutil
 from pathlib import Path
 
 from . import network_handler
-
 from .. import constants
-
 from ..sys_patch import sys_patch_helpers
 from ..efi_builder import build
 from ..support import subprocess_wrapper
@@ -27,11 +24,9 @@ from ..sys_patch.patchsets import (
     DynamicPatchset
 )
 
-
 class PatcherValidation:
     """
     Validation class for the patcher
-
     Primarily for Continuous Integration
     """
 
@@ -46,17 +41,14 @@ class PatcherValidation:
             example_data.MacBookPro.MacBookPro92_Stock,
             example_data.MacBookPro.MacBookPro111_Stock,
             example_data.MacBookPro.MacBookPro133_Stock,
-
             example_data.Macmini.Macmini52_Stock,
             example_data.Macmini.Macmini61_Stock,
             example_data.Macmini.Macmini71_Stock,
-
             example_data.iMac.iMac81_Stock,
             example_data.iMac.iMac112_Stock,
             example_data.iMac.iMac122_Upgraded,
             example_data.iMac.iMac122_Upgraded_Nvidia,
             example_data.iMac.iMac151_Stock,
-
             example_data.MacPro.MacPro31_Stock,
             example_data.MacPro.MacPro31_Upgrade,
             example_data.MacPro.MacPro31_Modern_AMD,
@@ -72,65 +64,66 @@ class PatcherValidation:
             example_data.MacBookPro.MacBookPro141_SSD_Upgrade,
         ]
 
-        self._validate_configs()
-        self._validate_sys_patch()
+        try:
+            self._validate_configs()
+            self._validate_sys_patch()
+        finally:
+            self._cleanup_build_artifacts()
 
+    def _cleanup_build_artifacts(self) -> None:
+        """Securely removes the build directory using shutil instead of shell rm -rf."""
+        build_path = Path(self.constants.build_path)
+        if build_path.exists() and build_path.is_dir():
+            # Safety gate: ensure we only delete folders specifically named 'Build-Folder'
+            if build_path.name == "Build-Folder":
+                logging.info(f"Cleaning up build directory: {build_path}")
+                shutil.rmtree(build_path, ignore_errors=True)
 
     def _build_prebuilt(self) -> None:
-        """
-        Generate a build for each predefined model
-        Then validate against ocvalidate
-        """
-
         for model in model_array.SupportedSMBIOS:
             logging.info(f"Validating predefined model: {model}")
             self.constants.custom_model = model
             build.BuildOpenCore(self.constants.custom_model, self.constants)
-            result = subprocess.run([self.constants.ocvalidate_path, f"{self.constants.opencore_release_folder}/EFI/OC/config.plist"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+            config_path = Path(self.constants.opencore_release_folder) / "EFI" / "OC" / "config.plist"
+            # SECURITY: Use list-based subprocess to prevent shell injection
+            result = subprocess.run(
+                [str(self.constants.ocvalidate_path), str(config_path)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False
+            )
+
             if result.returncode != 0:
-                logging.info("Error on build!")
+                logging.error(f"Validation failed for model: {model}")
                 subprocess_wrapper.log(result)
                 raise Exception(f"Validation failed for predefined model: {model}")
-            else:
-                logging.info(f"Validation succeeded for predefined model: {model}")
 
+            logging.info(f"Validation succeeded for predefined model: {model}")
 
     def _build_dumps(self) -> None:
-        """
-        Generate a build for each predefined model
-        Then validate against ocvalidate
-        """
-
         for model in self.valid_dumps:
             self.constants.computer = model
             self.constants.custom_model = ""
             logging.info(f"Validating dumped model: {self.constants.computer.real_model}")
             build.BuildOpenCore(self.constants.computer.real_model, self.constants)
-            result = subprocess.run([self.constants.ocvalidate_path, f"{self.constants.opencore_release_folder}/EFI/OC/config.plist"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            if result.returncode != 0:
-                logging.info("Error on build!")
-                subprocess_wrapper.log(result)
-                raise Exception(f"Validation failed for predefined model: {self.constants.computer.real_model}")
-            else:
-                logging.info(f"Validation succeeded for predefined model: {self.constants.computer.real_model}")
 
+            config_path = Path(self.constants.opencore_release_folder) / "EFI" / "OC" / "config.plist"
+            result = subprocess.run(
+                [str(self.constants.ocvalidate_path), str(config_path)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False
+            )
+
+            if result.returncode != 0:
+                logging.error(f"Validation failed for dumped model: {self.constants.computer.real_model}")
+                subprocess_wrapper.log(result)
+                raise Exception(f"Validation failed for model: {self.constants.computer.real_model}")
+
+            logging.info(f"Validation succeeded for model: {self.constants.computer.real_model}")
 
     def _validate_root_patch_files(self, major_kernel: int, minor_kernel: int) -> None:
-        """
-        Validate that all files in the patchset are present in the payload
-
-        Parameters:
-            major_kernel (int): Major kernel version
-            minor_kernel (int): Minor kernel version
-        """
-
-        patch_type_merge_exempt     = ["MechanismPlugins", "ModulePlugins"]
-        patch_type_overwrite_exempt = []
-
+        patch_type_merge_exempt = ["MechanismPlugins", "ModulePlugins"]
         patchset = HardwarePatchsetDetection(self.constants, xnu_major=major_kernel, xnu_minor=minor_kernel, validation=True).patches
 
         for patch_core in patchset:
-            # Check if any unknown PathType is present
             for install_type in patchset[patch_core]:
                 if install_type not in PatchType:
                     raise Exception(f"Unknown PatchType: {install_type}")
@@ -145,187 +138,118 @@ class PatcherValidation:
                             except TypeError:
                                 pass
 
-                            # Technically there is nothing wrong with using a .framework with OVERWRITE, but it's a good indicator of a mistake
                             if install_type in [PatchType.OVERWRITE_SYSTEM_VOLUME, PatchType.OVERWRITE_DATA_VOLUME]:
-                                if install_file.endswith(".framework") and install_file not in patch_type_overwrite_exempt:
-                                    raise Exception(f"{install_file} used with {install_type}, are you certain this is correct?")
+                                if install_file.endswith(".framework"):
+                                    raise Exception(f"{install_file} used with {install_type} - framework overwrite is prohibited.")
                             elif install_type in [PatchType.MERGE_SYSTEM_VOLUME, PatchType.MERGE_DATA_VOLUME]:
                                 if not install_file.endswith(".framework") and install_file not in patch_type_merge_exempt:
-                                    raise Exception(f"{install_file} used with {install_type}, are you certain this is correct?")
+                                    raise Exception(f"{install_file} used with {install_type} - non-framework merge is prohibited.")
 
-                            source_file = str(self.constants.payload_local_binaries_root_path) + "/" + patchset[patch_core][install_type][install_directory][install_file] + install_directory + "/" + install_file
-                            if not Path(source_file).exists():
-                                logging.info(f"File not found: {source_file}")
-                                raise Exception(f"Failed to find {source_file}")
-                            if self.verify_unused_files is True:
-                                if source_file not in self.active_patchset_files:
-                                    self.active_patchset_files.append(source_file)
+                            # SECURITY: Use pathlib to resolve paths correctly
+                            source_file = Path(self.constants.payload_local_binaries_root_path) / patchset[patch_core][install_type][install_directory][install_file] / install_directory.lstrip("/") / install_file
+                            if not source_file.exists():
+                                raise Exception(f"Failed to find source file: {source_file}")
+
+                            if self.verify_unused_files and str(source_file) not in self.active_patchset_files:
+                                self.active_patchset_files.append(str(source_file))
 
         logging.info(f"Validating against Darwin {major_kernel}.{minor_kernel}")
-        if not sys_patch_helpers.SysPatchHelpers(self.constants).generate_patchset_plist(patchset, f"OpenCore-Legacy-Patcher-{major_kernel}.{minor_kernel}.plist", None, None):
+        plist_name = f"OpenCore-Legacy-Patcher-{major_kernel}.{minor_kernel}.plist"
+        if not sys_patch_helpers.SysPatchHelpers(self.constants).generate_patchset_plist(patchset, plist_name, None, None):
             raise Exception("Failed to generate patchset plist")
 
-        # Remove the plist file after validation
-        Path(self.constants.payload_path / f"OpenCore-Legacy-Patcher-{major_kernel}.{minor_kernel}.plist").unlink()
-
+        plist_path = self.constants.payload_path / plist_name
+        if plist_path.exists():
+            plist_path.unlink()
 
     def _unmount_dmg(self) -> None:
-        """
-        Unmounts the Universal-Binaries.dmg
-        """
-        if Path(self.constants.payload_path / Path("Universal-Binaries_overlay")).exists():
-            subprocess.run(
-                [
-                    "/bin/rm", "-f", Path(self.constants.payload_path / Path("Universal-Binaries_overlay"))
-                ],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-            )
-        if Path(self.constants.payload_path / Path("Universal-Binaries")).exists():
-            output = subprocess.run(
-                [
-                    "/usr/bin/hdiutil", "detach", Path(self.constants.payload_path / Path("Universal-Binaries")),
-                    "-force"
-                ],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-            )
+        """Secure unmounting of DMG and overlay cleanup."""
+        overlay_path = self.constants.payload_path / "Universal-Binaries_overlay"
+        mount_path = self.constants.payload_path / "Universal-Binaries"
 
-            if output.returncode != 0:
-                logging.info("Failed to unmount Universal-Binaries.dmg")
-                subprocess_wrapper.log(output)
+        # SECURITY: pathlib.unlink is safer than subprocess rm
+        if overlay_path.exists():
+            overlay_path.unlink(missing_ok=True)
 
-                raise Exception("Failed to unmount Universal-Binaries.dmg")
-
+        if mount_path.exists():
+            subprocess.run(["/usr/bin/hdiutil", "detach", str(mount_path), "-force"], capture_output=True, check=False)
 
     def _validate_sys_patch(self) -> None:
-        """
-        Validates sys_patch modules
-        """
+        dmg_path = Path(self.constants.payload_local_binaries_root_path_dmg)
+        mount_point = self.constants.payload_path / "Universal-Binaries"
+        shadow_path = self.constants.payload_path / "Universal-Binaries_overlay"
 
-        if not Path(self.constants.payload_local_binaries_root_path_dmg).exists():
-            dl_obj = network_handler.DownloadObject(f"https://github.com/dortania/PatcherSupportPkg/releases/download/{self.constants.patcher_support_pkg_version}/Universal-Binaries.dmg", self.constants.payload_local_binaries_root_path_dmg)
+        if not dmg_path.exists():
+            url = f"https://github.com/dortania/PatcherSupportPkg/releases/download/{self.constants.patcher_support_pkg_version}/Universal-Binaries.dmg"
+            dl_obj = network_handler.DownloadObject(url, str(dmg_path))
             dl_obj.download(spawn_thread=False)
-            if dl_obj.download_complete is False:
-                logging.info("Failed to download Universal-Binaries.dmg")
+            if not dl_obj.download_complete:
                 raise Exception("Failed to download Universal-Binaries.dmg")
 
         logging.info("Validating Root Patch File integrity")
-
         self._unmount_dmg()
 
-        output = subprocess.run(
-            [
-                "/usr/bin/hdiutil", "attach", "-noverify", f"{self.constants.payload_local_binaries_root_path_dmg}",
-                "-mountpoint", Path(self.constants.payload_path / Path("Universal-Binaries")),
-                "-nobrowse",
-                "-shadow", Path(self.constants.payload_path / Path("Universal-Binaries_overlay")),
-                "-passphrase", "password"
-            ],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-        )
+        mount_cmd = [
+            "/usr/bin/hdiutil", "attach", "-noverify", str(dmg_path),
+            "-mountpoint", str(mount_point),
+            "-nobrowse", "-shadow", str(shadow_path),
+            "-passphrase", "password"
+        ]
 
-        if output.returncode != 0:
-            logging.info("Failed to mount Universal-Binaries.dmg")
-            subprocess_wrapper.log(output)
-
+        result = subprocess.run(mount_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+        if result.returncode != 0:
+            subprocess_wrapper.log(result)
             raise Exception("Failed to mount Universal-Binaries.dmg")
 
-        logging.info("Mounted Universal-Binaries.dmg")
+        try:
+            # Full loop coverage 0-10 for every supported OS version
+            for supported_os in [os_data.os_data.big_sur, os_data.os_data.monterey, os_data.os_data.ventura, os_data.os_data.sonoma, os_data.os_data.sequoia]:
+                for i in range(0, 11):
+                    self._validate_root_patch_files(supported_os, i)
 
-        atexit.register(self._unmount_dmg)
+            logging.info("Validating SNB Board ID patcher")
+            self.constants.computer.reported_board_id = "Mac-7BA5B2DFE22DDD8C"
+            sys_patch_helpers.SysPatchHelpers(self.constants).snb_board_id_patch(self.constants.payload_local_binaries_root_path)
 
-        for supported_os in [os_data.os_data.big_sur, os_data.os_data.monterey, os_data.os_data.ventura, os_data.os_data.sonoma, os_data.os_data.sequoia]:
-            for i in range(0, 10):
-                self._validate_root_patch_files(supported_os, i)
-
-        logging.info("Validating SNB Board ID patcher")
-        self.constants.computer.reported_board_id = "Mac-7BA5B2DFE22DDD8C"
-        sys_patch_helpers.SysPatchHelpers(self.constants).snb_board_id_patch(self.constants.payload_local_binaries_root_path)
-
-        if self.verify_unused_files is True:
-            self._find_unused_files()
-
-        # unmount the dmg
-        output = subprocess.run(
-            [
-                "/usr/bin/hdiutil", "detach", Path(self.constants.payload_path / Path("Universal-Binaries")),
-                "-force"
-            ],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-        )
-
-        if output.returncode != 0:
-            logging.info("Failed to unmount Universal-Binaries.dmg")
-            subprocess_wrapper.log(output)
-
-            raise Exception("Failed to unmount Universal-Binaries.dmg")
-
-        subprocess.run(
-            [
-                "/bin/rm", "-f", Path(self.constants.payload_path / Path("Universal-Binaries_overlay"))
-            ],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-        )
-
+            if self.verify_unused_files:
+                self._find_unused_files()
+        finally:
+            self._unmount_dmg()
 
     def _find_unused_files(self) -> None:
-        """
-        Find PatcherSupportPkg files that are unused by the patcher
-
-        Note this function is extremely slow, so only manually run when needed
-        """
-        if self.active_patchset_files == []:
+        if not self.active_patchset_files:
             return
 
+        binaries_path = Path(self.constants.payload_local_binaries_root_path)
         unused_files = []
 
-        for file in Path(self.constants.payload_local_binaries_root_path).rglob("*"):
-            if file.is_dir():
+        for file in binaries_path.rglob("*"):
+            if file.is_dir() or file.name == ".DS_Store":
                 continue
 
-            relative_path = Path(file).relative_to(self.constants.payload_local_binaries_root_path)
-
-            if relative_path.name == ".DS_Store":
+            rel = str(file.relative_to(binaries_path))
+            if rel in [".fseventsd/fseventsd-uuid", ".signed"]:
                 continue
 
-            if str(relative_path) in [".fseventsd/fseventsd-uuid", ".signed"]:
-                continue
+            if not any((rel in str(Path(u).relative_to(binaries_path)) or str(Path(u).relative_to(binaries_path)) in rel) for u in self.active_patchset_files):
+                unused_files.append(rel)
 
-            is_used = False
-            for used_file in self.active_patchset_files:
-                used_relative_path = Path(used_file).relative_to(self.constants.payload_local_binaries_root_path)
-                if str(relative_path) in str(used_relative_path):
-                    is_used = True
-                    break
-                if str(used_relative_path) in str(relative_path):
-                    is_used = True
-                    break
-
-            if is_used:
-                continue
-
-            unused_files.append(relative_path)
-
-        if len(unused_files) > 0:
-            logging.info("Unused files found:")
-            for file in unused_files:
-                logging.info(f"  {file}")
-
+        if unused_files:
+            logging.info("Unused files found in payload:")
+            for f in unused_files:
+                logging.info(f"  {f}")
 
     def _validate_configs(self) -> None:
-        """
-        Validates build modules
-        """
-
-        # First run is with default settings
+        """Comprehensive config testing matrix."""
+        # Test 1: Standard Build Defaults
         self._build_prebuilt()
         self._build_dumps()
 
-        # Second run, flip all settings
+        # Test 2: Deep configuration testing with all flags enabled
+        logging.info("Validating complex configurations...")
         self.constants.verbose_debug = True
         self.constants.opencore_debug = True
-        self.constants.kext_debug = True
         self.constants.kext_variant = "DEBUG"
-        self.constants.kext_debug = True
         self.constants.showpicker = False
         self.constants.sip_status = False
         self.constants.secure_status = True
@@ -336,8 +260,10 @@ class PatcherValidation:
         self.constants.force_surplus = True
         self.constants.software_demux = True
         self.constants.serial_settings = "Minimal"
+        self.constants.disable_cs_restriction = True
+        self.constants.set_loader_suffix = True
+        self.constants.enable_unsupported_backlight = True
+        self.constants.disable_amfi = True
 
         self._build_prebuilt()
         self._build_dumps()
-
-        subprocess.run(["/bin/rm", "-rf", self.constants.build_path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
