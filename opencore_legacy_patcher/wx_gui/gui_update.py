@@ -76,7 +76,7 @@ class UpdateFrame(wx.Frame):
         )
 
         # Title: Preparing update
-        title_label = wx.StaticText(self.frame, label="Preparing download...", pos=(-1,1))
+        title_label = wx.StaticText(self.frame, label="Preparing download... this may take several minutes", pos=(-1,1))
         title_label.SetFont(gui_support.font_factory(19, wx.FONTWEIGHT_BOLD))
         title_label.Centre(wx.HORIZONTAL)
 
@@ -224,6 +224,8 @@ class UpdateFrame(wx.Frame):
                 wx.CallAfter(wx.MessageBox, "User cancelled update", "Update Cancelled", wx.OK | wx.ICON_INFORMATION)
             else:
                 logging.critical("Failed to install update.")
+                logging.exception("Stack Trace:")
+                logging.info("Try to update later.")
                 subprocess_wrapper.log(result)
 
                 # If it fails, fall back to opening the PKG
@@ -235,8 +237,15 @@ class UpdateFrame(wx.Frame):
 
 
     def _launch_update(self) -> None:
-        """
-        Launches newly installed update
-        """
-        logging.info("Launching update: '/Library/Application Support/Dortania/OpenCore-Patcher.app'")
-        subprocess.Popen(["/Library/Application Support/Dortania/OpenCore-Patcher.app/Contents/MacOS/OpenCore-Patcher", "--update_installed"])
+        try:
+            """
+            Launches newly installed update
+            """
+            logging.info("Launching update: '/Library/Application Support/Dortania/OpenCore-Patcher.app'")
+            subprocess.Popen(["/Library/Application Support/Dortania/OpenCore-Patcher.app/Contents/MacOS/OpenCore-Patcher", "--update_installed"])
+        except Exception as e:
+            logging.error("Launching the update failed due to the following error:")
+            logging.exception("Stack Trace:")
+            logging.info("Please go to /Library/Application Support/Dortania and delete everything from there.")
+            logging.info("Then try again to update later.")
+            sys.exit(3)
