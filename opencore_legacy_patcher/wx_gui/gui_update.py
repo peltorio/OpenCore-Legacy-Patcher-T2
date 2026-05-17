@@ -245,6 +245,6 @@ class UpdateFrame(wx.Frame):
             logging.info("Launching update: '/Library/Application Support/Dortania/OpenCore-Patcher.app'")
             subprocess.Popen(["/Library/Application Support/Dortania/OpenCore-Patcher.app/Contents/MacOS/OpenCore-Patcher", "--update_installed"])
         except Exception as e:
-            logging.error("Launching the update failed due to the following error:")
+            logging.error("Launching the update via the builtin updater failed due to the following error:")
             logging.exception("Stack Trace:")
             logging.info("We'll fix the issue for you.")
