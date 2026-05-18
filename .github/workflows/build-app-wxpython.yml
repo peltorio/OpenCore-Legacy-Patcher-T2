@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - macos-15-intel
     tags:
       - '*'
     paths-ignore:
